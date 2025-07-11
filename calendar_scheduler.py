@@ -1,34 +1,10 @@
-"""
-
-Алгоритм
-
-Добавление задачи:
-1. Останавливаем планировщик.
-2. Добавляем задачу.
-3. Запускаем планировщик.
-
-Выполнение задачи:
-1. Вызывается промежуточный коллбек.
-2. Формируем очередную задачу и кладем в очередь.
-3. Запускаем оригинальный коллбек.
-
-Остановка планировщика:
-
-1. Отменяются все задачи.
-2. Дожидаемся выполнения последней задачи.
-3. Завершаем run().
-
-Отмена задач:
-
-1. Отменяем все задачи.
-2. Функция run() не завершается, а ждет появления новых задач.
-
-"""
-
-
 import sched, time, datetime
+import calendar
 from enum import Enum
 import threading
+
+
+# TODO: учесть часовой пояс, так как time.time() возвращает время в UTC
 
 
 class Event:
@@ -58,16 +34,6 @@ class Event:
                     pass
             self.internal_event = None
 
-
-# TODO: использовать готовый модуль calendar
-class Week(Enum):
-    Monday = 0
-    Tuesday = 1
-    Wednesday = 2
-    Thursday = 3
-    Friday = 4
-    Saturday = 5
-    Sunday = 6
 
 _sentinel = object()
 
@@ -217,15 +183,10 @@ class CalendarScheduler:
 
     def enter_daily_event(
         self,
-        action,
-        action_args=(),
-        action_kwargs=_sentinel,
+        action, action_args=(), action_kwargs=_sentinel,
         interval: int = 1,
-        hour: int = 0,
-        minute: int = 0,
-        second: int = 0,
-        start_time: float = None,
-        end_time: float = None
+        hour: int = 0, minute: int = 0, second: int = 0,
+        start_time: float = None, end_time: float = None
     ):
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
             return None
@@ -239,6 +200,28 @@ class CalendarScheduler:
         start_time -= 1
 
         self._enter_daily_event(event, start_time, 86400*interval, hour, minute, second, end_time, action, action_args, action_kwargs)
+        self._push()
+        return event
+
+    def enter_weekly_event(
+        self,
+        action, action_args=(), action_kwargs=_sentinel,
+        interval: int = 1,
+        day: calendar.Day = calendar.Day.MONDAY, hour: int = 0, minute: int = 0, second: int = 0,
+        start_time: float = None, end_time: float = None
+    ):
+        if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
+            return None
+
+        event = Event(self._scheduler)
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        # Отматываем на секунду назад, чтобы первый запуск был в start_time.
+        start_time -= 1
+
+        self._enter_weekly_event(event, start_time, 604800*interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
         self._push()
         return event
 
@@ -355,6 +338,27 @@ class CalendarScheduler:
             argument=(self._enter_daily_event, event, (next_time, interval, hour, minute, second, end_time), action, action_args, action_kwargs)
         )
 
+    def _enter_weekly_event(self, event: Event, start_time, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):
+        # Определяем ближайшее время наступления нужного дня недели и времени без использования datetime
+        seconds_in_day = 86400
+        # День недели для start_time (0=понедельник, с учётом того, что 1970-01-01 был четвергом)
+        weekday = (int(start_time // seconds_in_day) + 3) % 7
+        days_ahead = (day.value - weekday) % 7
+        # timestamp для полуночи ближайшего нужного дня
+        midnight = (start_time // seconds_in_day + days_ahead) * seconds_in_day
+        next_time = midnight + hour * 3600 + minute * 60 + second
+        if next_time <= start_time:
+            next_time += interval
+        current_time = self.timefunc()
+        if current_time > next_time:
+            next_time = current_time
+        if end_time is not None and next_time >= end_time:
+            return
+        event.internal_event = self._scheduler.enterabs(next_time, 0,
+            action=self._action_runner,
+            argument=(self._enter_weekly_event, event, (next_time, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
+        )
+
     @staticmethod
     def _action_runner(enter_func, event, time_args, action, action_args, action_kwargs):
         if action_kwargs is _sentinel:
@@ -365,9 +369,6 @@ class CalendarScheduler:
             enter_func(event, *time_args, action, action_args, action_kwargs)
         action(*action_args, **action_kwargs)
 
-
-    def enter_weekly_event(self, interval=1, day_of_week=Week.Monday, hour=0, minute=0, second=0):
-        raise NotImplementedError()
 
     def enter_monthly_event(self, interval=1, day=0, hour=0, minute=0, second=0):
         # Если day больше, чем количество дней в месяце, то используется последний день месяца.
