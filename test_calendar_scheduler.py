@@ -225,7 +225,7 @@ class TestDailyFirstTime(unittest.TestCase):
         self.assertEqual(90000, self.clock)
 
 
-class TestWeekly(unittest.TestCase):
+class TestWeeklyFirstTime(unittest.TestCase):
     def setUp(self):
         self.time_controller = TestTimeController()
         self.scheduler = CalendarScheduler(timefunc=self.time_controller.get_clock, sleep_controller=self.time_controller)
@@ -367,7 +367,7 @@ class TestRealDaily(unittest.TestCase):
 # тесты на границы interval, second, minute и так далее
 # тесты с более реальным временем, начинающимся не с нуля
 # тесты реального времени на одно исполнение на основе текущего времени, просто подбираем параметры запуска ближайщие к текущему времени
-
+# при пропуске события, запуск по сетке.
 
 if __name__ == '__main__':
     # TODO: сделать прерывание по таймауту, так как тест может зависнуть.

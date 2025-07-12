@@ -3,6 +3,10 @@ import calendar
 from enum import Enum
 import threading
 
+SECONDS_IN_DAY = 86400
+SECONDS_IN_HOUR = 3600
+SECONDS_IN_MINUTE = 60
+
 
 # TODO: учесть часовой пояс, так как time.time() возвращает время в UTC
 
@@ -104,13 +108,13 @@ class CalendarScheduler:
             start_time: float = None,
             end_time: float = None
     ):
-        if 1 > interval > 999:
+        if 1 > interval:
             return None
         event = Event(self._scheduler)
         if start_time is None:
             start_time = self.timefunc()
         interval_ms = interval / 1000
-        self._enter_every_millisecond_event(event, interval_ms, start_time, end_time, action, args, kwargs)
+        self._enter_every_millisecond_event(event, start_time, interval_ms, end_time, action, args, kwargs)
         self._push()
         return event
 
@@ -123,10 +127,14 @@ class CalendarScheduler:
             start_time: float = None,
             end_time: float = None
     ):
-        if 1 > interval > 59:
+        if 1 > interval:
             return None
         event = Event(self._scheduler)
-        self._enter_every_second_event(event, interval, start_time, end_time, action, args, kwargs)
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        self._enter_every_second_event(event, start_time, interval, end_time, action, args, kwargs)
         self._push()
         return event
 
@@ -225,110 +233,93 @@ class CalendarScheduler:
         self._push()
         return event
 
-    def _enter_every_millisecond_event(self, event: Event, interval, start_time, end_time, action, args, kwargs):
-        if event.internal_event is not None:
-            next_time = event.internal_event.time + interval
-        else:
-            # TODO: нужно посчитать только один раз при первом запуске.
-            if start_time is None:
-                start_time = self.timefunc()
-                next_time = start_time + interval
-            else:
-                next_time = start_time
+    def _enter_every_millisecond_event(self, event: Event, start_time, interval, end_time, action, args, kwargs):
+        def _next_time(base_time):
+            return base_time + interval
+
+        next_time = _next_time(start_time)
 
         current_time = self.timefunc()
-
         if current_time > next_time:
-            next_time = current_time
+            next_time = _next_time(current_time)
 
         if end_time is not None and next_time >= end_time:
             return
-
+    
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
-            argument=(self._enter_every_millisecond_event, event, (interval,start_time,end_time), action, args, kwargs)
+            argument=(self._enter_every_millisecond_event, event, (next_time,interval,end_time), action, args, kwargs)
         )
 
-    def _enter_every_second_event(self, event: Event, interval, start_time, end_time, action, args, kwargs):
-        if event.internal_event is not None:
-            next_time = event.internal_event.time + interval
-        else:
-            # TODO: нужно посчитать только один раз при первом запуске.
-            if start_time is None:
-                start_time = self.timefunc()
-                next_time = start_time + interval
-            else:
-                next_time = start_time
+    def _enter_every_second_event(self, event: Event, start_time, interval, end_time, action, args, kwargs):
+        def _next_time(base_time):
+            return base_time + interval
+
+        next_time = _next_time(start_time)
 
         current_time = self.timefunc()
         if current_time > next_time:
-            next_time = current_time
+            next_time = _next_time(current_time)
 
         if end_time is not None and next_time >= end_time:
             return
 
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
-            argument=(self._enter_every_second_event, event, (interval,start_time,end_time), action, args, kwargs)
+            argument=(self._enter_every_second_event, event, (next_time,interval,end_time), action, args, kwargs)
         )
 
     def _enter_every_minute_event(self, event: Event, start_time, interval, second, end_time, action, action_args, action_kwargs):
-        start_minute = start_time // 60 * 60
-        start_second = start_time % 60
-        next_time = start_minute + second
-        if start_second >= second:
-            next_time += interval
+        def _next_time(base_time):
+            minute_start = base_time // SECONDS_IN_MINUTE * SECONDS_IN_MINUTE
+            target_time = minute_start + second
+            if target_time <= base_time:
+                target_time += interval
+            return target_time
 
+        next_time = _next_time(start_time)
         current_time = self.timefunc()
         if current_time > next_time:
-            next_time = current_time
-
+            next_time = _next_time(current_time)
         if end_time is not None and next_time >= end_time:
             return
-
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
             argument=(self._enter_every_minute_event, event, (next_time,interval,second,end_time), action, action_args, action_kwargs)
         )
 
     def _enter_hourly_event(self, event: Event, start_time, interval, minute, second, end_time, action, action_args, action_kwargs):
-        start_hour = start_time // 3600 * 3600
-        start_minute = start_time % 3600 // 60
-        start_second = start_time % 60
-        next_time = start_hour + 60 * minute + second
+        def _next_time(base_time):
+            hour_start = base_time // SECONDS_IN_HOUR * SECONDS_IN_HOUR
+            target_time = hour_start + minute * SECONDS_IN_MINUTE + second
+            if target_time <= base_time:
+                target_time += interval
+            return target_time
 
-        if start_minute > minute or (start_minute == minute and start_second >= second):
-            next_time += interval
-
+        next_time = _next_time(start_time)
         current_time = self.timefunc()
         if current_time > next_time:
-            next_time = current_time
-
+            next_time = _next_time(current_time)
         if end_time is not None and next_time >= end_time:
             return
-
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
             argument=(self._enter_hourly_event, event, (next_time, interval, minute, second, end_time), action, action_args, action_kwargs)
         )
 
     def _enter_daily_event(self, event: Event, start_time, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
-        start_day = start_time // 86400 * 86400
-        start_hour = start_time % 86400 // 3600
-        start_minute = start_time % 3600 // 60
-        start_second = start_time % 60
-        next_time = start_day + 3600 * hour + 60 * minute + second
+        def _next_time(base_time):
+            day_start = base_time // SECONDS_IN_DAY * SECONDS_IN_DAY
+            target_time = day_start + hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second
+            if target_time <= base_time:
+                target_time += interval
+            return target_time
 
-        if (
-               (start_hour > hour)
-            or (start_hour == hour and start_minute > minute)
-            or (start_hour == hour and start_minute == minute and start_second >= second)
-        ):
-            next_time += interval
-
+        next_time = _next_time(start_time)
+        
         current_time = self.timefunc()
         if current_time > next_time:
-            next_time = current_time
+            next_time = _next_time(current_time)
 
         if end_time is not None and next_time >= end_time:
             return
@@ -339,21 +330,25 @@ class CalendarScheduler:
         )
 
     def _enter_weekly_event(self, event: Event, start_time, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):
-        # Определяем ближайшее время наступления нужного дня недели и времени без использования datetime
-        seconds_in_day = 86400
-        # День недели для start_time (0=понедельник, с учётом того, что 1970-01-01 был четвергом)
-        weekday = (int(start_time // seconds_in_day) + 3) % 7
-        days_ahead = (day.value - weekday) % 7
-        # timestamp для полуночи ближайшего нужного дня
-        midnight = (start_time // seconds_in_day + days_ahead) * seconds_in_day
-        next_time = midnight + hour * 3600 + minute * 60 + second
-        if next_time <= start_time:
-            next_time += interval
+        def _next_time(base_time):
+            start_day = int(base_time // SECONDS_IN_DAY)
+            weekday = (start_day + 3) % 7
+            days_ahead = (day.value - weekday) % 7
+            midnight = (start_day + days_ahead) * SECONDS_IN_DAY
+            target_time = midnight + hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second
+            if target_time <= base_time:
+                target_time += interval
+            return target_time
+
+        next_time = _next_time(start_time)
+
         current_time = self.timefunc()
         if current_time > next_time:
-            next_time = current_time
+            next_time = _next_time(current_time)
+            
         if end_time is not None and next_time >= end_time:
             return
+
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
             argument=(self._enter_weekly_event, event, (next_time, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
