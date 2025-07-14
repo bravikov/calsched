@@ -194,7 +194,7 @@ class CalendarScheduler:
         action, action_args=(), action_kwargs=_sentinel,
         interval: int = 1,
         hour: int = 0, minute: int = 0, second: int = 0,
-        start_time: float = None, end_time: float = None
+        start_time: float = None, end_time: float = None, tz: datetime.tzinfo = None
     ):
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
             return None
@@ -207,7 +207,7 @@ class CalendarScheduler:
         # Отматываем на секунду назад, чтобы первый запуск был в start_time.
         start_time -= 1
 
-        self._enter_daily_event(event, start_time, 86400*interval, hour, minute, second, end_time, action, action_args, action_kwargs)
+        self._enter_daily_event(event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs)
         self._push()
         return event
 
@@ -307,13 +307,13 @@ class CalendarScheduler:
             argument=(self._enter_hourly_event, event, (next_time, interval, minute, second, end_time), action, action_args, action_kwargs)
         )
 
-    def _enter_daily_event(self, event: Event, start_time, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
+    def _enter_daily_event(self, event: Event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
-            day_start = base_time // SECONDS_IN_DAY * SECONDS_IN_DAY
-            target_time = day_start + hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second
-            if target_time <= base_time:
-                target_time += interval
-            return target_time
+            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
+            target_time = dt_base_time.replace(hour=hour, minute=minute, second=second)
+            if target_time <= dt_base_time:
+                target_time += datetime.timedelta(days=interval)
+            return target_time.timestamp()
 
         next_time = _next_time(start_time)
         
@@ -326,7 +326,7 @@ class CalendarScheduler:
 
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
-            argument=(self._enter_daily_event, event, (next_time, interval, hour, minute, second, end_time), action, action_args, action_kwargs)
+            argument=(self._enter_daily_event, event, (next_time, tz, interval, hour, minute, second, end_time), action, action_args, action_kwargs)
         )
 
     def _enter_weekly_event(self, event: Event, start_time, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):

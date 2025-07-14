@@ -171,7 +171,7 @@ class TestDaily(unittest.TestCase):
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
-        event = scheduler.enter_daily_event(action=action)
+        event = scheduler.enter_daily_event(action=action, tz=datetime.timezone.utc)
         events.append(event)
         scheduler.run()
 
@@ -190,37 +190,37 @@ class TestDailyFirstTime(unittest.TestCase):
         self.clock = self.time_controller.get_clock()
 
     def test_1(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3600, hour=2, minute=1, second=1)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3600, hour=2, minute=1, second=1)
         self.scheduler.run()
         self.assertEqual(7261, self.clock)
 
     def test_2(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3660, hour=1, minute=2, second=1)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3660, hour=1, minute=2, second=1)
         self.scheduler.run()
         self.assertEqual(3721, self.clock)
 
     def test_3(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3661, hour=1, minute=1, second=2)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3661, hour=1, minute=1, second=2)
         self.scheduler.run()
         self.assertEqual(3662, self.clock)
 
     def test_4(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3662, hour=1, minute=1, second=2)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3662, hour=1, minute=1, second=2)
         self.scheduler.run()
         self.assertEqual(3662, self.clock)
 
     def test_5(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3662, hour=1, minute=1, second=1)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3662, hour=1, minute=1, second=1)
         self.scheduler.run()
         self.assertEqual(90061, self.clock)
 
     def test_6(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=3662, hour=1, minute=0, second=1)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=3662, hour=1, minute=0, second=1)
         self.scheduler.run()
         self.assertEqual(90001, self.clock)
 
     def test_7(self):
-        self.event = self.scheduler.enter_daily_event(action=self.action, start_time=7200, hour=1, minute=0, second=0)
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=7200, hour=1, minute=0, second=0)
         self.scheduler.run()
         self.assertEqual(90000, self.clock)
 
