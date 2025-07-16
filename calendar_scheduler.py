@@ -172,7 +172,8 @@ class CalendarScheduler:
         minute: int = 0,
         second: int = 0,
         start_time: float = None,
-        end_time: float = None
+        end_time: float = None,
+        tz: datetime.tzinfo = None
     ):
         if (1 > interval) or (0 > minute > 59) or (0 > second > 59):
             return None
@@ -185,7 +186,7 @@ class CalendarScheduler:
         # Отматываем на секунду назад, чтобы первый запуск был в start_time.
         start_time -= 1
 
-        self._enter_hourly_event(event, start_time, 3600*interval, minute, second, end_time, action, action_args, action_kwargs)
+        self._enter_hourly_event(event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs)
         self._push()
         return event
 
@@ -216,7 +217,7 @@ class CalendarScheduler:
         action, action_args=(), action_kwargs=_sentinel,
         interval: int = 1,
         day: calendar.Day = calendar.Day.MONDAY, hour: int = 0, minute: int = 0, second: int = 0,
-        start_time: float = None, end_time: float = None
+        start_time: float = None, end_time: float = None, tz: datetime.tzinfo = None
     ):
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
             return None
@@ -229,7 +230,7 @@ class CalendarScheduler:
         # Отматываем на секунду назад, чтобы первый запуск был в start_time.
         start_time -= 1
 
-        self._enter_weekly_event(event, start_time, 604800*interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
+        self._enter_weekly_event(event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
         self._push()
         return event
 
@@ -245,7 +246,7 @@ class CalendarScheduler:
 
         if end_time is not None and next_time >= end_time:
             return
-    
+        
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
             argument=(self._enter_every_millisecond_event, event, (next_time,interval,end_time), action, args, kwargs)
@@ -288,35 +289,38 @@ class CalendarScheduler:
             argument=(self._enter_every_minute_event, event, (next_time,interval,second,end_time), action, action_args, action_kwargs)
         )
 
-    def _enter_hourly_event(self, event: Event, start_time, interval, minute, second, end_time, action, action_args, action_kwargs):
+    def _enter_hourly_event(self, event: Event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
-            hour_start = base_time // SECONDS_IN_HOUR * SECONDS_IN_HOUR
-            target_time = hour_start + minute * SECONDS_IN_MINUTE + second
-            if target_time <= base_time:
-                target_time += interval
-            return target_time
+            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
+            target_time = dt_base_time.replace(minute=minute, second=second, microsecond=0)
+            if target_time <= dt_base_time:
+                target_time += datetime.timedelta(hours=interval)
+            return target_time.timestamp()
 
         next_time = _next_time(start_time)
+
         current_time = self.timefunc()
         if current_time > next_time:
             next_time = _next_time(current_time)
+
         if end_time is not None and next_time >= end_time:
             return
+
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
-            argument=(self._enter_hourly_event, event, (next_time, interval, minute, second, end_time), action, action_args, action_kwargs)
+            argument=(self._enter_hourly_event, event, (next_time, tz, interval, minute, second, end_time), action, action_args, action_kwargs)
         )
 
     def _enter_daily_event(self, event: Event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
             dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
-            target_time = dt_base_time.replace(hour=hour, minute=minute, second=second)
+            target_time = dt_base_time.replace(hour=hour, minute=minute, second=second, microsecond=0)
             if target_time <= dt_base_time:
                 target_time += datetime.timedelta(days=interval)
             return target_time.timestamp()
 
         next_time = _next_time(start_time)
-        
+
         current_time = self.timefunc()
         if current_time > next_time:
             next_time = _next_time(current_time)
@@ -329,29 +333,28 @@ class CalendarScheduler:
             argument=(self._enter_daily_event, event, (next_time, tz, interval, hour, minute, second, end_time), action, action_args, action_kwargs)
         )
 
-    def _enter_weekly_event(self, event: Event, start_time, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):
+    def _enter_weekly_event(self, event: Event, start_time, tz, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
-            start_day = int(base_time // SECONDS_IN_DAY)
-            weekday = (start_day + 3) % 7
-            days_ahead = (day.value - weekday) % 7
-            midnight = (start_day + days_ahead) * SECONDS_IN_DAY
-            target_time = midnight + hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second
-            if target_time <= base_time:
-                target_time += interval
-            return target_time
+            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
+            days_ahead = (day.value - dt_base_time.weekday()) % 7
+            target_date = dt_base_time + datetime.timedelta(days=days_ahead)
+            target_time = target_date.replace(hour=hour, minute=minute, second=second, microsecond=0)
+            if target_time <= dt_base_time:
+                target_time += datetime.timedelta(weeks=interval)
+            return target_time.timestamp()
 
         next_time = _next_time(start_time)
 
         current_time = self.timefunc()
         if current_time > next_time:
             next_time = _next_time(current_time)
-            
+
         if end_time is not None and next_time >= end_time:
             return
 
         event.internal_event = self._scheduler.enterabs(next_time, 0,
             action=self._action_runner,
-            argument=(self._enter_weekly_event, event, (next_time, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
+            argument=(self._enter_weekly_event, event, (next_time, tz, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
         )
 
     @staticmethod
