@@ -347,6 +347,148 @@ class TestRealEveryMinute(unittest.TestCase):
             self.assertAlmostEqual(clocks[i+1] - clocks[i], 60.0, delta=0.1, msg=clocks)
 
 
+class TestMonthlyFirstTime(unittest.TestCase):
+    def setUp(self):
+        self.time_controller = TestTimeController()
+        self.scheduler = CalendarScheduler(timefunc=self.time_controller.get_clock, sleep_controller=self.time_controller)
+        self.event = None
+        self.clock = None
+
+    def action(self):
+        self.event.cancel()
+        self.clock = self.time_controller.get_clock()
+
+    def test_first_occurrence_before(self):
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_first_occurrence_at(self):
+        start = datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_first_occurrence_after(self):
+        start = datetime.datetime(1970, 1, 6, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 2, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_with_time(self):
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=12, minute=34, second=56)
+        self.scheduler.run()
+        expected = datetime.datetime(1970, 1, 5, 12, 34, 56, tzinfo=datetime.timezone.utc).timestamp()
+        self.assertEqual(self.clock, expected)
+
+    def test_interval_2_months(self):
+        start = datetime.datetime(1970, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=0, minute=0, second=0, interval=2)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+
+class TestMonthly(unittest.TestCase):
+    def test_first_day_of_month(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 3:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_monthly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, day=1, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 2, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 3, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 4, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_last_day_of_month(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 2:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 31, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_monthly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, day=31, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 31, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 2, 28, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 3, 31, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_february_leap(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 2:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1972, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_monthly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, day=29, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1972, 1, 29, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1972, 2, 29, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1972, 3, 29, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_interval_2_months(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 3:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_monthly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, interval=2, day=2, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 3, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 5, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 7, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_with_time(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 2:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_monthly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, day=2, hour=1, minute=2, second=3)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 2, 1, 2, 3, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 2, 2, 1, 2, 3, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1970, 3, 2, 1, 2, 3, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+
 @unittest.skip("so long")
 class TestRealDaily(unittest.TestCase):
     def test_once(self):

@@ -357,6 +357,62 @@ class CalendarScheduler:
             argument=(self._enter_weekly_event, event, (next_time, tz, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
         )
 
+    def enter_monthly_event(
+        self,
+        action,
+        action_args=(),
+        action_kwargs=_sentinel,
+        interval: int = 1,
+        day: int = 1,
+        hour: int = 0,
+        minute: int = 0,
+        second: int = 0,
+        start_time: float = None,
+        end_time: float = None,
+        tz: datetime.tzinfo = None
+    ):
+        if (interval < 1 or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59)):
+            return None
+
+        event = Event(self._scheduler)
+        if start_time is None:
+            start_time = self.timefunc()
+        start_time -= 1
+        self._enter_monthly_event(event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
+        self._push()
+        return event
+
+    def _enter_monthly_event(self, event: Event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs):
+        def _next_time(base_time):
+            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
+            last_day = calendar.monthrange(dt_base_time.year, dt_base_time.month)[1]
+            limit_day = min(day, last_day)
+            target_time = dt_base_time.replace(day=limit_day, hour=hour, minute=minute, second=second, microsecond=0)
+            if target_time <= dt_base_time:
+                next_month = dt_base_time.month + interval
+                next_year = dt_base_time.year + (next_month - 1) // 12
+                next_month = (next_month - 1) % 12 + 1
+                last_day = calendar.monthrange(next_year, next_month)[1]
+                limit_day = min(day, last_day)
+                target_time = datetime.datetime(next_year, next_month, limit_day, hour, minute, second, tzinfo=tz)
+            return target_time.timestamp()
+
+
+        next_time = _next_time(start_time)
+        current_time = self.timefunc()
+
+        if current_time > next_time:
+            next_time = _next_time(current_time)
+
+        if end_time is not None and next_time >= end_time:
+            return
+
+        event.internal_event = self._scheduler.enterabs(
+            next_time, 0,
+            action=self._action_runner,
+            argument=(self._enter_monthly_event, event, (next_time, tz, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
+        )
+
     @staticmethod
     def _action_runner(enter_func, event, time_args, action, action_args, action_kwargs):
         if action_kwargs is _sentinel:
@@ -366,10 +422,3 @@ class CalendarScheduler:
                 return
             enter_func(event, *time_args, action, action_args, action_kwargs)
         action(*action_args, **action_kwargs)
-
-
-    def enter_monthly_event(self, interval=1, day=0, hour=0, minute=0, second=0):
-        # Если day больше, чем количество дней в месяце, то используется последний день месяца.
-        # Если day=31 - для февраля day=28 или day = 29
-        # Или лучше бросить исключение?
-        raise NotImplementedError()
