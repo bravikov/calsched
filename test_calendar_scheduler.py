@@ -105,6 +105,16 @@ class TestEveryMinuteFirstTime(unittest.TestCase):
         self.scheduler.run()
         self.assertEqual(90.0, self.clock)
 
+    def test_4(self):
+        self.event = self.scheduler.enter_every_minute_event(action=self.action, start_time=60)
+        self.scheduler.run()
+        self.assertEqual(60, self.clock)
+
+    def test_5(self):
+        self.event = self.scheduler.enter_every_minute_event(action=self.action, start_time=60, interval=2)
+        self.scheduler.run()
+        self.assertEqual(60, self.clock)
+
 
 class TestHourly(unittest.TestCase):
     def test_interval_default(self):
@@ -156,6 +166,16 @@ class TestHourlyFirstTime(unittest.TestCase):
         self.event = self.scheduler.enter_hourly_event(action=self.action, tz=datetime.timezone.utc, start_time=65, minute=1, second=4)
         self.scheduler.run()
         self.assertEqual(3664.0, self.clock)
+
+    def test_5(self):
+        self.event = self.scheduler.enter_hourly_event(action=self.action, tz=datetime.timezone.utc, start_time=3600)
+        self.scheduler.run()
+        self.assertEqual(3600.0, self.clock)
+
+    def test_6(self):
+        self.event = self.scheduler.enter_hourly_event(action=self.action, tz=datetime.timezone.utc, start_time=3600, interval=2)
+        self.scheduler.run()
+        self.assertEqual(3600.0, self.clock)
 
 
 class TestDaily(unittest.TestCase):
@@ -224,6 +244,16 @@ class TestDailyFirstTime(unittest.TestCase):
         self.scheduler.run()
         self.assertEqual(90000, self.clock)
 
+    def test_8(self):
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=86400)
+        self.scheduler.run()
+        self.assertEqual(86400, self.clock)
+
+    def test_9(self):
+        self.event = self.scheduler.enter_daily_event(action=self.action, tz=datetime.timezone.utc, start_time=86400, interval=2)
+        self.scheduler.run()
+        self.assertEqual(86400, self.clock)
+
 
 class TestWeeklyFirstTime(unittest.TestCase):
     def setUp(self):
@@ -276,6 +306,18 @@ class TestWeeklyFirstTime(unittest.TestCase):
         self.scheduler.run()
         self.assertEqual(self.clock, friday)
         # Следующее срабатывание будет через 2 недели
+
+    def test_start_time_equal_action_time_interval_1(self):
+        friday = 1*86400
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.FRIDAY)
+        self.scheduler.run()
+        self.assertEqual(self.clock, friday)
+
+    def test_start_time_equal_action_time_interval_2(self):
+        friday = 1*86400
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.FRIDAY, interval=2)
+        self.scheduler.run()
+        self.assertEqual(self.clock, friday)
 
 
 class TestRealEveryMillisecond(unittest.TestCase):
@@ -384,7 +426,7 @@ class TestMonthlyFirstTime(unittest.TestCase):
         self.assertEqual(self.clock, expected)
 
     def test_interval_2_months(self):
-        start = datetime.datetime(1970, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
         self.event = self.scheduler.enter_monthly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, day=5, hour=0, minute=0, second=0, interval=2)
         self.scheduler.run()
         self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
@@ -489,6 +531,135 @@ class TestMonthly(unittest.TestCase):
         ])
 
 
+class TestYearly(unittest.TestCase):
+    def test_jan_5_every_year(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 4:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_yearly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, month=1, day=5, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1971, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1972, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1973, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1974, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_last_day_of_february(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 3:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_yearly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, month=2, day=29, hour=0, minute=0, second=0)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 2, 28, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1971, 2, 28, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1972, 2, 29, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1973, 2, 28, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_interval_3_years(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 3:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_yearly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, month=1, day=1, hour=0, minute=0, second=0, interval=3)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1973, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1976, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1979, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+    def test_with_time(self):
+        time_controller = TestTimeController()
+        events = []
+        clocks = []
+        def action():
+            if len(clocks) >= 2:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        start_time = datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        event = scheduler.enter_yearly_event(action=action, tz=datetime.timezone.utc, start_time=start_time, month=2, day=10, hour=13, minute=14, second=15)
+        events.append(event)
+        scheduler.run()
+        self.assertEqual(clocks, [
+            datetime.datetime(1970, 2, 10, 13, 14, 15, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1971, 2, 10, 13, 14, 15, tzinfo=datetime.timezone.utc).timestamp(),
+        ])
+
+
+class TestYearlyFirstTime(unittest.TestCase):
+    def setUp(self):
+        self.time_controller = TestTimeController()
+        self.scheduler = CalendarScheduler(timefunc=self.time_controller.get_clock, sleep_controller=self.time_controller)
+        self.event = None
+        self.clock = None
+
+    def action(self):
+        self.event.cancel()
+        self.clock = self.time_controller.get_clock()
+
+    def test_first_occurrence_before(self):
+        # Событие 5 января, стартуем 1 января 1970
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_yearly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, month=1, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_first_occurrence_at(self):
+        # Событие 5 января, стартуем 5 января
+        start = datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_yearly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, month=1, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_first_occurrence_after(self):
+        # Событие 5 января, стартуем 6 января (следующий год)
+        start = datetime.datetime(1970, 1, 6, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_yearly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, month=1, day=5, hour=0, minute=0, second=0)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1971, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+    def test_with_time(self):
+        # 5 января 12:34:56, стартуем 1 января
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_yearly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, month=1, day=5, hour=12, minute=34, second=56)
+        self.scheduler.run()
+        expected = datetime.datetime(1970, 1, 5, 12, 34, 56, tzinfo=datetime.timezone.utc).timestamp()
+        self.assertEqual(self.clock, expected)
+
+    def test_interval_2_years(self):
+        # 5 января, интервал 2 года, стартуем 1 января
+        start = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+        self.event = self.scheduler.enter_yearly_event(action=self.action, tz=datetime.timezone.utc, start_time=start, month=1, day=5, hour=0, minute=0, second=0, interval=2)
+        self.scheduler.run()
+        self.assertEqual(self.clock, datetime.datetime(1970, 1, 5, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp())
+
+
 @unittest.skip("so long")
 class TestRealDaily(unittest.TestCase):
     def test_once(self):
@@ -510,6 +681,7 @@ class TestRealDaily(unittest.TestCase):
 # тесты с более реальным временем, начинающимся не с нуля
 # тесты реального времени на одно исполнение на основе текущего времени, просто подбираем параметры запуска ближайщие к текущему времени
 # при пропуске события, запуск по сетке.
+# тест перехода через новый год 1970
 
 if __name__ == '__main__':
     # TODO: сделать прерывание по таймауту, так как тест может зависнуть.
