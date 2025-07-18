@@ -3,8 +3,7 @@ import calendar
 from enum import Enum
 import threading
 
-SECONDS_IN_DAY = 86400
-SECONDS_IN_HOUR = 3600
+
 SECONDS_IN_MINUTE = 60
 
 
@@ -160,33 +159,6 @@ class CalendarScheduler:
         self._push()
         return event
 
-    def enter_hourly_event(
-        self,
-        action,
-        action_args=(),
-        action_kwargs=_sentinel,
-        interval: int = 1,
-        minute: int = 0,
-        second: int = 0,
-        start_time: float = None,
-        end_time: float = None,
-        tz: datetime.tzinfo = None
-    ):
-        if (1 > interval) or (0 > minute > 59) or (0 > second > 59):
-            return None
-
-        event = Event(self._scheduler)
-
-        if start_time is None:
-            start_time = self.timefunc()
-
-        # Отматываем на секунду назад, чтобы первый запуск был в start_time.
-        start_time -= 1
-
-        self._enter_hourly_event(event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs)
-        self._push()
-        return event
-
     def enter_daily_event(
         self,
         action, action_args=(), action_kwargs=_sentinel,
@@ -286,11 +258,43 @@ class CalendarScheduler:
             argument=(self._enter_every_minute_event, event, (next_time,interval,second,end_time), action, action_args, action_kwargs)
         )
 
+    def enter_hourly_event(
+        self,
+        action,
+        action_args=(),
+        action_kwargs=_sentinel,
+        interval: int = 1,
+        minute: int = 0,
+        second: int = 0,
+        start_time: float = None,
+        end_time: float = None,
+        tz: datetime.tzinfo = None
+    ):
+        if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+            return None
+
+        event = Event(self._scheduler)
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
+        self._enter_hourly_event(event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs)
+        self._push()
+        return event
+
     def _enter_hourly_event(self, event: Event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
             dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
             target_time = dt_base_time.replace(minute=minute, second=second, microsecond=0)
-            if target_time <= dt_base_time:
+            past_time = (
+                (event.internal_event is not None and target_time <= dt_base_time) # repeat event
+                or
+                (event.internal_event is None and target_time < dt_base_time) # first event
+            )
+            if past_time:
                 target_time += datetime.timedelta(hours=interval)
             return target_time.timestamp()
 
