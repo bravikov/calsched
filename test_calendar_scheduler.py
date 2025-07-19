@@ -37,8 +37,7 @@ class TestEverySecond(unittest.TestCase):
         events.append(event)
         scheduler.run()
 
-        # TODO: должен начинаться с 0.0
-        self.assertEqual(clocks, [1.0, 2.0, 3.0, 4.0, 5.0])
+        self.assertEqual([0.0, 1.0, 2.0, 3.0, 4.0, 5.0], clocks)
 
     def test_interval_2s(self):
         time_controller = TestTimeController()
@@ -56,7 +55,39 @@ class TestEverySecond(unittest.TestCase):
         events.append(event)
         scheduler.run()
 
-        self.assertEqual(clocks, [2.0, 4.0, 6.0])
+        self.assertEqual([0.0, 2.0, 4.0, 6.0], clocks)
+
+
+class TestEverySecondFirstTime(unittest.TestCase):
+    def setUp(self):
+        self.time_controller = TestTimeController()
+        self.scheduler = CalendarScheduler(timefunc=self.time_controller.get_clock, sleep_controller=self.time_controller)
+        self.event = None
+        self.clock = None
+
+    def action(self):
+        self.event.cancel()
+        self.clock = self.time_controller.get_clock()
+
+    def test_1(self):
+        self.event = self.scheduler.enter_every_second_event(action=self.action, start_time=20)
+        self.scheduler.run()
+        self.assertEqual(20.0, self.clock)
+
+    def test_2(self):
+        self.event = self.scheduler.enter_every_second_event(action=self.action, start_time=20.1)
+        self.scheduler.run()
+        self.assertEqual(21.0, self.clock)
+
+    def test_3(self):
+        self.event = self.scheduler.enter_every_second_event(action=self.action, start_time=20.1, interval=2)
+        self.scheduler.run()
+        self.assertEqual(22.0, self.clock)
+
+    def test_4(self):
+        self.event = self.scheduler.enter_every_second_event(action=self.action, start_time=20.1, interval=3)
+        self.scheduler.run()
+        self.assertEqual(23.0, self.clock)
 
 
 class TestEveryMinute(unittest.TestCase):
