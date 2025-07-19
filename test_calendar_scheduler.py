@@ -1,7 +1,9 @@
 import datetime
+import threading
 import unittest
 import time
 import calendar
+from time import sleep
 
 from calendar_scheduler import CalendarScheduler
 
@@ -765,13 +767,78 @@ class TestRealDaily(unittest.TestCase):
         scheduler.run()
 
 
-#TODO:
-# Передача в action args и kwargs
-# тесты на границы interval, second, minute и так далее
-# тесты с более реальным временем, начинающимся не с нуля
-# тесты реального времени на одно исполнение на основе текущего времени, просто подбираем параметры запуска ближайщие к текущему времени
-# при пропуске события, запуск по сетке.
-# тест перехода через новый год 1970
+class TestRunForever(unittest.TestCase):
+    def test_stop_before_run_forever(self):
+        scheduler = CalendarScheduler()
+        scheduler.stop()
+        scheduler.run_forever()
+
+    def test_stop_while_run_wait(self):
+        scheduler = CalendarScheduler()
+        thread_running = threading.Event()
+        def run():
+            thread_running.set()
+            scheduler.run_forever()
+        threading.Thread(name="scheduler", target=run).start()
+        thread_running.wait()
+        sleep(0.5)
+        scheduler.stop()
+
+    def test_stop_in_action(self):
+        scheduler = CalendarScheduler()
+        thread_running = threading.Event()
+        def run():
+            thread_running.set()
+            scheduler.run_forever()
+        threading.Thread(name="scheduler", target=run).start()
+        thread_running.wait()
+        thread_running.clear()
+        sleep(0.5)
+        events = []
+        count_action = 0
+        def action():
+            scheduler.stop()
+            events[0].cancel()
+            nonlocal count_action
+            count_action += 1
+            thread_running.set()
+        event = scheduler.enter_every_second_event(action=action)
+        events.append(event)
+        thread_running.wait()
+        self.assertEqual(1, count_action)
+
+    def test_event_after_cancelled_event(self):
+        scheduler = CalendarScheduler()
+        thread_control = threading.Event()
+        def run():
+            thread_control.set()
+            scheduler.run_forever()
+        threading.Thread(name="scheduler", target=run).start()
+        thread_control.wait()
+        thread_control.clear()
+        sleep(0.5)
+        events = []
+        count_action = 0
+        def action():
+            events[0].cancel()
+            nonlocal count_action
+            count_action += 1
+            thread_control.set()
+        event = scheduler.enter_every_second_event(action=action)
+        events.append(event)
+        thread_control.wait()
+        thread_control.clear()
+        sleep(0.5)
+        def action2():
+            scheduler.stop()
+            events[1].cancel()
+            nonlocal count_action
+            count_action += 1
+            thread_control.set()
+        event = scheduler.enter_every_second_event(action=action2)
+        events.append(event)
+        thread_control.wait()
+        self.assertEqual(2, count_action)
 
 if __name__ == '__main__':
     # TODO: сделать прерывание по таймауту, так как тест может зависнуть.

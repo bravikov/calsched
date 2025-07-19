@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import threading
 from typing import Optional, Any
 
+
 SECONDS_IN_MINUTE = 60
 
 
@@ -15,11 +16,7 @@ class Event:
         self.canceled = False
 
     def cancel(self):
-        """
-        Cancel an event.
-
-        This must be presented the ID as returned by enter().
-        If the event is not in the queue, this raises ValueError.
+        """Cancel an event.
 
         Вызов cancel() не влияет на уже запущенную функцию action().
         """
@@ -226,8 +223,8 @@ class DefaultSleepController:
         self._terminate_sleep = threading.Event()  # Используется, чтобы прерывать функцию sleep.
 
     def sleep(self, seconds):
-        self._terminate_sleep.wait(seconds)
         self._terminate_sleep.clear()
+        self._terminate_sleep.wait(seconds)
 
     def interrupt(self):
         self._terminate_sleep.set()
@@ -237,36 +234,23 @@ class CalendarScheduler:
     def __init__(self, timefunc = time.time, sleep_controller=DefaultSleepController()):
         self.timefunc = timefunc
         self.sleep_controller = sleep_controller
-        self._terminate_sleep = threading.Event() # Используется, чтобы прерывать функцию sleep.
-        self._stopped = False
-        self._run = threading.Event()
         self._scheduler = sched.scheduler(timefunc, self.sleep_controller.sleep)
+        self._run = threading.Event()
+        self._stopped = False
 
     def run(self):
-        if self._stopped:
-            return
         self._scheduler.run()
 
     def run_forever(self):
-        # Если есть задачи, у которых просрочено время, то они выполнятся сразу после запуска.
-        # Функция завершится после отмены всех задач с помощью функции cancel(),
-        # и после завершения выполняющейся задачи.
-        # Для завершения метода run(), нужно вызвать метод stop().
-        # После завершения, повторно запустить не получится.
-        if self._stopped:
-            return
         while True:
-            self._run.wait()
-            self._scheduler.run()
-            self._run.clear()
             if self._stopped:
                 break
+            self._run.clear()
+            self._run.wait()
+            self._scheduler.run()
 
-    def no_more_events(self):
-        """
-        Stops the loop of waiting for events.
-        If there are no more events, then the run_forever() function ends.
-        """
+    def stop(self):
+        """Stop run_forever() after canceled all events or if there is no events."""
         self._stopped = True
         self._run.set()
 
@@ -277,7 +261,7 @@ class CalendarScheduler:
         self.sleep_controller.interrupt()
         self._run.set()
 
-    # Слишком малые интервалы не имеют практического смысла, так как перестают соблюдаться.
+    # Слишком малые интервалы не имеют практического смысла, так как перестают соблюдаться. Поэтому интервал по умолчанию равен 100.
     def enter_every_millisecond_event(
             self,
             action,
