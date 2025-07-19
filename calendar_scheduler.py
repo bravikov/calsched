@@ -69,6 +69,23 @@ class InternalHourlyEvent(EventSettings):
         return target_time.timestamp()
 
 
+@dataclass(slots=True, frozen=True)
+class InternalDailyEvent(EventSettings):
+    def next_time(self, run_time):
+        dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
+        target_time = dt_base_time.replace(hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+
+        past_event = False
+        if self.event.internal_event is not None:
+            if target_time <= dt_base_time:
+                past_event = True
+        elif target_time < dt_base_time:
+            past_event = True
+        if past_event:
+            target_time += datetime.timedelta(days=self.interval)
+        return target_time.timestamp()
+
+
 _sentinel = object()
 
 
@@ -228,7 +245,7 @@ class CalendarScheduler:
         hour: int = 0, minute: int = 0, second: int = 0,
         start_time: float = None, end_time: float = None, tz: datetime.tzinfo = None
     ):
-        if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
+        if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
         event = Event(self._scheduler)
@@ -236,10 +253,13 @@ class CalendarScheduler:
         if start_time is None:
             start_time = self.timefunc()
 
-        # Отматываем на секунду назад, чтобы первый запуск был в start_time.
-        start_time -= 1
+        daily_event = InternalDailyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute, hour
+        )
 
-        self._enter_daily_event(event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs)
+        enter_event(daily_event, self.timefunc, start_time)
+
         self._push()
         return event
 
@@ -351,28 +371,6 @@ class CalendarScheduler:
         enter_event(hourly_event, self.timefunc, start_time)
         self._push()
         return event
-
-    def _enter_daily_event(self, event: Event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
-        def _next_time(base_time):
-            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
-            target_time = dt_base_time.replace(hour=hour, minute=minute, second=second, microsecond=0)
-            if target_time <= dt_base_time:
-                target_time += datetime.timedelta(days=interval)
-            return target_time.timestamp()
-
-        next_time = _next_time(start_time)
-
-        current_time = self.timefunc()
-        if current_time > next_time:
-            next_time = _next_time(current_time)
-
-        if end_time is not None and next_time >= end_time:
-            return
-
-        event.internal_event = self._scheduler.enterabs(next_time, 0,
-            action=self._action_runner,
-            argument=(self._enter_daily_event, event, (next_time, tz, interval, hour, minute, second, end_time), action, action_args, action_kwargs)
-        )
 
     def _enter_weekly_event(self, event: Event, start_time, tz, interval, day: calendar.Day, hour, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
