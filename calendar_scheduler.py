@@ -105,6 +105,29 @@ class InternalWeeklyEvent(EventSettings):
         return target_time.timestamp()
 
 
+@dataclass(slots=True, frozen=True)
+class InternalMonthlyEvent(EventSettings):
+    def next_time(self, run_time):
+        dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
+        last_day = calendar.monthrange(dt_base_time.year, dt_base_time.month)[1]
+        limit_day = min(self.day_of_month, last_day)
+        target_time = dt_base_time.replace(day=limit_day, hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+        past_event = False
+        if self.event.internal_event is not None:
+            if target_time <= dt_base_time:
+                past_event = True
+        elif target_time < dt_base_time:
+            past_event = True
+        if past_event:
+            next_month = dt_base_time.month + self.interval
+            next_year = dt_base_time.year + (next_month - 1) // 12
+            next_month = (next_month - 1) % 12 + 1
+            last_day = calendar.monthrange(next_year, next_month)[1]
+            limit_day = min(self.day_of_month, last_day)
+            target_time = datetime.datetime(next_year, next_month, limit_day, self.hour, self.minute, self.second, tzinfo=self.tz)
+        return target_time.timestamp()
+
+
 _sentinel = object()
 
 
@@ -438,40 +461,16 @@ class CalendarScheduler:
         if end_time is not None and start_time >= end_time:
             return None
 
-        start_time -= 1
-        self._enter_monthly_event(event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
+        monthly_event = InternalMonthlyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute, hour, day_of_month=day
+        )
+
+        enter_event(monthly_event, self.timefunc, start_time)
+
         self._push()
         return event
 
-    def _enter_monthly_event(self, event: Event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs):
-        def _next_time(base_time):
-            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
-            last_day = calendar.monthrange(dt_base_time.year, dt_base_time.month)[1]
-            limit_day = min(day, last_day)
-            target_time = dt_base_time.replace(day=limit_day, hour=hour, minute=minute, second=second, microsecond=0)
-            if target_time <= dt_base_time:
-                next_month = dt_base_time.month + interval
-                next_year = dt_base_time.year + (next_month - 1) // 12
-                next_month = (next_month - 1) % 12 + 1
-                last_day = calendar.monthrange(next_year, next_month)[1]
-                limit_day = min(day, last_day)
-                target_time = datetime.datetime(next_year, next_month, limit_day, hour, minute, second, tzinfo=tz)
-            return target_time.timestamp()
-
-        next_time = _next_time(start_time)
-        current_time = self.timefunc()
-
-        if current_time > next_time:
-            next_time = _next_time(current_time)
-
-        if end_time is not None and next_time >= end_time:
-            return
-
-        event.internal_event = self._scheduler.enterabs(
-            next_time, 0,
-            action=self._action_runner,
-            argument=(self._enter_monthly_event, event, (next_time, tz, interval, day, hour, minute, second, end_time), action, action_args, action_kwargs)
-        )
 
     def enter_yearly_event(
         self,
