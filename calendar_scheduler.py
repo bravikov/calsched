@@ -1,8 +1,8 @@
 import sched, time, datetime
 import calendar
-from enum import Enum
+from dataclasses import dataclass
 import threading
-
+from typing import Optional, Any
 
 SECONDS_IN_MINUTE = 60
 
@@ -10,8 +10,8 @@ SECONDS_IN_MINUTE = 60
 class Event:
     def __init__(self, scheduler):
         self.lock = threading.Lock()
-        self._scheduler = scheduler
-        self.internal_event = None
+        self.scheduler = scheduler
+        self.internal_event: Optional[sched.Event] = None
         self.canceled = False
 
     def cancel(self):
@@ -29,13 +29,75 @@ class Event:
             self.canceled = True
             if self.internal_event:
                 try:
-                    self._scheduler.cancel(self.internal_event)
+                    self.scheduler.cancel(self.internal_event)
                 except ValueError:
                     pass
             self.internal_event = None
 
 
+@dataclass(slots=True, frozen=True)
+class EventSettings:
+    event: Event
+    action: Any
+    action_args: tuple[Any]
+    action_kwargs: Any
+    start_time: float
+    end_time: Optional[float]
+    tz: Optional[datetime.tzinfo]
+    interval: int
+    second: int = 0
+    minute: int = 0
+    hour: int = 0
+    day_of_week: calendar.Day = calendar.Day.MONDAY
+    day_of_month: int = 1
+    month: int = 1
+
+
+@dataclass(slots=True, frozen=True)
+class InternalHourlyEvent(EventSettings):
+    def next_time(self, run_time):
+        dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
+        target_time = dt_base_time.replace(minute=self.minute, second=self.second, microsecond=0)
+        past_event = False
+        if self.event.internal_event is not None:
+            if target_time <= dt_base_time:
+                past_event = True
+        elif target_time < dt_base_time:
+            past_event = True
+        if past_event:
+            target_time += datetime.timedelta(hours=self.interval)
+        return target_time.timestamp()
+
+
 _sentinel = object()
+
+
+def _action_runner_2(enter_func, event_settings, cal_scheduler, event_time):
+    if event_settings.action_kwargs is _sentinel:
+        action_kwargs = {}
+    else:
+        action_kwargs = event_settings.action_kwargs
+    with event_settings.event.lock:
+        if event_settings.event.canceled:
+            return
+        enter_func(event_settings, cal_scheduler, event_time)
+    event_settings.action(*event_settings.action_args, **action_kwargs)
+
+
+def enter_event(event_settings, timefunc, run_time):
+    next_time = event_settings.next_time(run_time)
+
+    current_time = timefunc()
+    if current_time > next_time:
+        next_time = event_settings.next_time(current_time)
+
+    if event_settings.end_time is not None and next_time >= event_settings.end_time:
+        return
+
+    event_settings.event.internal_event = event_settings.event.scheduler.enterabs(next_time, 0,
+        action=_action_runner_2,
+        argument=(enter_event, event_settings, timefunc, next_time)
+    )
 
 
 class DefaultSleepController:
@@ -281,36 +343,14 @@ class CalendarScheduler:
         if end_time is not None and start_time >= end_time:
             return None
 
-        self._enter_hourly_event(event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs)
+        hourly_event = InternalHourlyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute
+        )
+
+        enter_event(hourly_event, self.timefunc, start_time)
         self._push()
         return event
-
-    def _enter_hourly_event(self, event: Event, start_time, tz, interval, minute, second, end_time, action, action_args, action_kwargs):
-        def _next_time(base_time):
-            dt_base_time = datetime.datetime.fromtimestamp(base_time, tz)
-            target_time = dt_base_time.replace(minute=minute, second=second, microsecond=0)
-            past_time = (
-                (event.internal_event is not None and target_time <= dt_base_time) # repeat event
-                or
-                (event.internal_event is None and target_time < dt_base_time) # first event
-            )
-            if past_time:
-                target_time += datetime.timedelta(hours=interval)
-            return target_time.timestamp()
-
-        next_time = _next_time(start_time)
-
-        current_time = self.timefunc()
-        if current_time > next_time:
-            next_time = _next_time(current_time)
-
-        if end_time is not None and next_time >= end_time:
-            return
-
-        event.internal_event = self._scheduler.enterabs(next_time, 0,
-            action=self._action_runner,
-            argument=(self._enter_hourly_event, event, (next_time, tz, interval, minute, second, end_time), action, action_args, action_kwargs)
-        )
 
     def _enter_daily_event(self, event: Event, start_time, tz, interval, hour, minute, second, end_time, action, action_args, action_kwargs):
         def _next_time(base_time):
