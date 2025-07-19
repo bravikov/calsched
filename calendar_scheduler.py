@@ -313,62 +313,6 @@ class CalendarScheduler:
         self._push()
         return event
 
-    def enter_daily_event(
-        self,
-        action, action_args=(), action_kwargs=_sentinel,
-        interval: int = 1,
-        hour: int = 0, minute: int = 0, second: int = 0,
-        start_time: float = None, end_time: float = None, tz: datetime.tzinfo = None
-    ):
-        if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
-            return None
-
-        event = Event(self._scheduler)
-
-        if start_time is None:
-            start_time = self.timefunc()
-
-        if end_time is not None and start_time >= end_time:
-            return None
-
-        daily_event = InternalDailyEvent(
-            event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute, hour
-        )
-
-        enter_event(daily_event, self.timefunc, start_time)
-
-        self._push()
-        return event
-
-    def enter_weekly_event(
-        self,
-        action, action_args=(), action_kwargs=_sentinel,
-        interval: int = 1,
-        day: calendar.Day = calendar.Day.MONDAY, hour: int = 0, minute: int = 0, second: int = 0,
-        start_time: float = None, end_time: float = None, tz: datetime.tzinfo = None
-    ):
-        if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
-            return None
-
-        event = Event(self._scheduler)
-
-        if start_time is None:
-            start_time = self.timefunc()
-
-        if end_time is not None and start_time >= end_time:
-            return None
-
-        daily_event = InternalWeeklyEvent(
-            event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute, hour, day_of_week=day
-        )
-
-        enter_event(daily_event, self.timefunc, start_time)
-
-        self._push()
-        return event
-
     def _enter_every_millisecond_event(self, event: Event, start_time, interval, end_time, action, args, kwargs):
         def _next_time(base_time):
             return base_time + interval
@@ -423,6 +367,75 @@ class CalendarScheduler:
             action=self._action_runner,
             argument=(self._enter_every_minute_event, event, (next_time,interval,second,end_time), action, action_args, action_kwargs)
         )
+
+    def enter_daily_event(
+        self,
+        action,
+        action_args=(),
+        action_kwargs=_sentinel,
+        interval: int = 1,
+        hour: int = 0,
+        minute: int = 0,
+        second: int = 0,
+        start_time: float = None,
+        end_time: float = None,
+        tz: datetime.tzinfo = None
+    ):
+        if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+            return None
+
+        event = Event(self._scheduler)
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
+        daily_event = InternalDailyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute, hour
+        )
+
+        enter_event(daily_event, self.timefunc, start_time)
+
+        self._push()
+        return event
+
+    def enter_weekly_event(
+        self,
+        action,
+        action_args=(),
+        action_kwargs=_sentinel,
+        interval: int = 1,
+        day: calendar.Day = calendar.Day.MONDAY,
+        hour: int = 0,
+        minute: int = 0,
+        second: int = 0,
+        start_time: float = None,
+        end_time: float = None,
+        tz: datetime.tzinfo = None
+    ):
+        if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
+            return None
+
+        event = Event(self._scheduler)
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
+        daily_event = InternalWeeklyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute, hour, day_of_week=day
+        )
+
+        enter_event(daily_event, self.timefunc, start_time)
+
+        self._push()
+        return event
 
     def enter_hourly_event(
         self,
@@ -491,7 +504,6 @@ class CalendarScheduler:
 
         self._push()
         return event
-
 
     def enter_yearly_event(
         self,
