@@ -20,6 +20,44 @@ class TestTimeController:
         return self.clock
 
 
+class TestEveryMillisecond(unittest.TestCase):
+    def test_interval_default(self):
+        time_controller = TestTimeController()
+
+        events = []
+        clocks = []
+
+        def action():
+            if time_controller.get_clock() >= 0.2:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        event = scheduler.enter_every_millisecond_event(action=action)
+        events.append(event)
+        scheduler.run()
+
+        self.assertEqual([0.1, 0.2], clocks)
+
+    def test_interval_1ms(self):
+        time_controller = TestTimeController()
+
+        events = []
+        clocks = []
+
+        def action():
+            if time_controller.get_clock() >= 0.003:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        event = scheduler.enter_every_millisecond_event(action=action, interval=1)
+        events.append(event)
+        scheduler.run()
+
+        self.assertEqual([0.001, 0.002, 0.003], clocks)
+
+
 class TestEverySecond(unittest.TestCase):
     def test_interval_default(self):
         time_controller = TestTimeController()

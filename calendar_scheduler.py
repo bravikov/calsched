@@ -54,6 +54,14 @@ class EventSettings:
 
 
 @dataclass(slots=True, frozen=True)
+class InternalEveryMillisecondEvent(EventSettings):
+    interval_ms: float = None
+
+    def next_time(self, run_time):
+        return run_time + self.interval_ms
+
+
+@dataclass(slots=True, frozen=True)
 class InternalEverySecondEvent(EventSettings):
     def next_time(self, run_time):
         target_time = run_time // 1 # remove milliseconds
@@ -183,7 +191,7 @@ class InternalYearlyEvent(EventSettings):
 _sentinel = object()
 
 
-def _action_runner_2(enter_func, event_settings, cal_scheduler, event_time):
+def _action_runner(enter_func, event_settings, cal_scheduler, event_time):
     if event_settings.action_kwargs is _sentinel:
         action_kwargs = {}
     else:
@@ -205,8 +213,10 @@ def enter_event(event_settings, timefunc, run_time):
     if event_settings.end_time is not None and next_time >= event_settings.end_time:
         return
 
-    event_settings.event.internal_event = event_settings.event.scheduler.enterabs(next_time, 0,
-        action=_action_runner_2,
+    event_settings.event.internal_event = event_settings.event.scheduler.enterabs(
+        time=next_time,
+        priority=0,
+        action=_action_runner,
         argument=(enter_event, event_settings, timefunc, next_time)
     )
 
@@ -271,8 +281,8 @@ class CalendarScheduler:
     def enter_every_millisecond_event(
             self,
             action,
-            args=(),
-            kwargs=_sentinel,
+            action_args=(),
+            action_kwargs=_sentinel,
             interval: int = 100,
             start_time: float = None,
             end_time: float = None
@@ -288,8 +298,13 @@ class CalendarScheduler:
         if end_time is not None and start_time >= end_time:
             return None
 
-        interval_ms = interval / 1000
-        self._enter_every_millisecond_event(event, start_time, interval_ms, end_time, action, args, kwargs)
+        second_event = InternalEveryMillisecondEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, interval_ms=interval/1000
+        )
+
+        enter_event(second_event, self.timefunc, start_time)
+
         self._push()
         return event
 
@@ -312,12 +327,12 @@ class CalendarScheduler:
         if end_time is not None and start_time >= end_time:
             return None
 
-        minute_event = InternalEverySecondEvent(
+        second_event = InternalEverySecondEvent(
             event, action, action_args, action_kwargs,
             start_time, end_time, interval=interval
         )
 
-        enter_event(minute_event, self.timefunc, start_time)
+        enter_event(second_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -352,24 +367,6 @@ class CalendarScheduler:
 
         self._push()
         return event
-
-    def _enter_every_millisecond_event(self, event: Event, start_time, interval, end_time, action, args, kwargs):
-        def _next_time(base_time):
-            return base_time + interval
-
-        next_time = _next_time(start_time)
-
-        current_time = self.timefunc()
-        if current_time > next_time:
-            next_time = _next_time(current_time)
-
-        if end_time is not None and next_time >= end_time:
-            return
-        
-        event.internal_event = self._scheduler.enterabs(next_time, 0,
-            action=self._action_runner,
-            argument=(self._enter_every_millisecond_event, event, (next_time,interval,end_time), action, args, kwargs)
-        )
 
     def enter_daily_event(
         self,
@@ -544,13 +541,3 @@ class CalendarScheduler:
 
         self._push()
         return event
-
-    @staticmethod
-    def _action_runner(enter_func, event, time_args, action, action_args, action_kwargs):
-        if action_kwargs is _sentinel:
-            action_kwargs = {}
-        with event.lock:
-            if event.canceled:
-                return
-            enter_func(event, *time_args, action, action_args, action_kwargs)
-        action(*action_args, **action_kwargs)
