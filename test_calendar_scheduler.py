@@ -255,6 +255,26 @@ class TestDailyFirstTime(unittest.TestCase):
         self.assertEqual(86400, self.clock)
 
 
+class TestWeekly(unittest.TestCase):
+    def test_interval_default(self):
+        time_controller = TestTimeController()
+
+        events = []
+        clocks = []
+
+        def action():
+            if time_controller.get_clock() >= 2160000.0:
+                events[0].cancel()
+            clocks.append(time_controller.get_clock())
+
+        scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
+        event = scheduler.enter_weekly_event(action=action, tz=datetime.timezone.utc)
+        events.append(event)
+        scheduler.run()
+
+        self.assertEqual([345600.0, 950400.0, 1555200.0, 2160000.0], clocks)
+
+
 class TestWeeklyFirstTime(unittest.TestCase):
     def setUp(self):
         self.time_controller = TestTimeController()
