@@ -629,6 +629,7 @@ class TestYearly(unittest.TestCase):
         self.assertEqual(clocks, [
             datetime.datetime(1970, 2, 10, 13, 14, 15, tzinfo=datetime.timezone.utc).timestamp(),
             datetime.datetime(1971, 2, 10, 13, 14, 15, tzinfo=datetime.timezone.utc).timestamp(),
+            datetime.datetime(1972, 2, 10, 13, 14, 15, tzinfo=datetime.timezone.utc).timestamp(),
         ])
 
 
