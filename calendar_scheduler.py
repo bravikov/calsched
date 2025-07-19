@@ -204,9 +204,15 @@ class CalendarScheduler:
     ):
         if 1 > interval:
             return None
+
         event = Event(self._scheduler)
+
         if start_time is None:
             start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
         interval_ms = interval / 1000
         self._enter_every_millisecond_event(event, start_time, interval_ms, end_time, action, args, kwargs)
         self._push()
@@ -227,6 +233,9 @@ class CalendarScheduler:
 
         if start_time is None:
             start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
 
         self._enter_every_second_event(event, start_time, interval, end_time, action, args, kwargs)
         self._push()
@@ -250,6 +259,9 @@ class CalendarScheduler:
         if start_time is None:
             start_time = self.timefunc()
 
+        if end_time is not None and start_time >= end_time:
+            return None
+
         # Отматываем на секунду назад, чтобы первый запуск был в start_time.
         start_time -= 1
 
@@ -271,6 +283,9 @@ class CalendarScheduler:
 
         if start_time is None:
             start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
 
         daily_event = InternalDailyEvent(
             event, action, action_args, action_kwargs,
@@ -296,6 +311,9 @@ class CalendarScheduler:
 
         if start_time is None:
             start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
 
         daily_event = InternalWeeklyEvent(
             event, action, action_args, action_kwargs,
@@ -409,12 +427,17 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
-        if (interval < 1 or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59)):
+        if (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
         event = Event(self._scheduler)
+
         if start_time is None:
             start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
         start_time -= 1
         self._enter_monthly_event(event, start_time, tz, interval, day, hour, minute, second, end_time, action, action_args, action_kwargs)
         self._push()
