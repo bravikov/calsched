@@ -225,7 +225,8 @@ class CalendarScheduler:
 
     def run(self):
         """
-        Start the scheduler and run all scheduled events until completion or cancellation.
+        Start the scheduler and run all scheduled events until completion.
+        Completion means that all events have either been cancelled or have reached their end_time.
         This method blocks the calling thread until all scheduled events have been processed.
         """
         self._scheduler.run()
@@ -411,17 +412,18 @@ class CalendarScheduler:
         tz: datetime.tzinfo = None
     ):
         """
+        Schedule an event to run hourly (or every N hours) at a specific minute and second.
 
-        :param action:
-        :param action_args:
-        :param action_kwargs:
-        :param interval:
-        :param minute:
-        :param second:
-        :param start_time:
-        :param end_time:
-        :param tz:
-        :return:
+        :param action: The function to execute when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in hours (default: 1).
+        :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
+        :param second: Second of the minute to run the event (default: 0). Range: 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :return: The scheduled event object, or None if parameters are invalid.
         """
         if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
@@ -469,7 +471,7 @@ class CalendarScheduler:
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
         :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
         :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event.
+        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
@@ -520,7 +522,7 @@ class CalendarScheduler:
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
         :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
         :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event.
+        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
@@ -571,7 +573,7 @@ class CalendarScheduler:
         :param second: Second of the minute to run the event (default: 0). Should be in range 0-59.
         :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
         :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event.
+        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
@@ -624,7 +626,7 @@ class CalendarScheduler:
         :param second: Second of the minute to run the event (default: 0). Should be in the range 0-59.
         :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
         :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event.
+        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if (interval < 1) or not (1 <= month <= 12) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
