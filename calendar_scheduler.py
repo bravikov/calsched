@@ -9,27 +9,10 @@ SECONDS_IN_MINUTE = 60
 
 
 class Event:
-    def __init__(self, scheduler):
+    def __init__(self):
         self.lock = threading.Lock()
-        self.scheduler = scheduler
         self.internal_event: Optional[sched.Event] = None
         self.canceled = False
-
-    def cancel(self):
-        """Cancel an event.
-
-        Вызов cancel() не влияет на уже запущенную функцию action().
-        """
-        with self.lock:
-            if self.canceled:
-                return
-            self.canceled = True
-            if self.internal_event:
-                try:
-                    self.scheduler.cancel(self.internal_event)
-                except ValueError:
-                    pass
-            self.internal_event = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -200,24 +183,6 @@ def _action_runner(enter_func, event_settings, cal_scheduler, event_time):
     event_settings.action(*event_settings.action_args, **action_kwargs)
 
 
-def enter_event(event_settings, timefunc, run_time):
-    next_time = event_settings.next_time(run_time)
-
-    current_time = timefunc()
-    if current_time > next_time:
-        next_time = event_settings.next_time(current_time)
-
-    if event_settings.end_time is not None and next_time >= event_settings.end_time:
-        return
-
-    event_settings.event.internal_event = event_settings.event.scheduler.enterabs(
-        time=next_time,
-        priority=0,
-        action=_action_runner,
-        argument=(enter_event, event_settings, timefunc, next_time)
-    )
-
-
 class DefaultSleepController:
     def __init__(self):
         self._terminate_sleep = threading.Event()  # Используется, чтобы прерывать функцию sleep.
@@ -235,31 +200,48 @@ class CalendarScheduler:
         self.timefunc = timefunc
         self.sleep_controller = sleep_controller
         self._scheduler = sched.scheduler(timefunc, self.sleep_controller.sleep)
-        self._run = threading.Event()
-        self._stopped = False
 
     def run(self):
         self._scheduler.run()
 
-    def run_forever(self):
-        while True:
-            if self._stopped:
-                break
-            self._run.clear()
-            self._run.wait()
-            self._scheduler.run()
-
-    def stop(self):
-        """Stop run_forever() after canceled all events or if there is no events."""
-        self._stopped = True
-        self._run.set()
+    def cancel(self, event: Event):
+        cancelled = False
+        with event.lock:
+            if event.canceled:
+                return
+            event.canceled = True
+            if event.internal_event:
+                try:
+                    self._scheduler.cancel(event.internal_event)
+                    cancelled = True
+                except ValueError:
+                    pass
+            event.internal_event = None
+        if cancelled:
+            self._push()
 
     def _sleep(self, seconds):
         self.sleep_controller.sleep(seconds)
 
     def _push(self):
         self.sleep_controller.interrupt()
-        self._run.set()
+
+    def _enter_event(self, event_settings, timefunc, run_time):
+        next_time = event_settings.next_time(run_time)
+
+        current_time = timefunc()
+        if current_time > next_time:
+            next_time = event_settings.next_time(current_time)
+
+        if event_settings.end_time is not None and next_time >= event_settings.end_time:
+            return
+
+        event_settings.event.internal_event = self._scheduler.enterabs(
+            time=next_time,
+            priority=0,
+            action=_action_runner,
+            argument=(self._enter_event, event_settings, timefunc, next_time)
+        )
 
     # Слишком малые интервалы не имеют практического смысла, так как перестают соблюдаться. Поэтому интервал по умолчанию равен 100.
     def enter_every_millisecond_event(
@@ -274,7 +256,7 @@ class CalendarScheduler:
         if 1 > interval:
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -287,7 +269,7 @@ class CalendarScheduler:
             start_time, end_time, interval_ms=interval/1000
         )
 
-        enter_event(second_event, self.timefunc, start_time)
+        self._enter_event(second_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -303,7 +285,7 @@ class CalendarScheduler:
     ):
         if 1 > interval:
             return None
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -316,7 +298,7 @@ class CalendarScheduler:
             start_time, end_time, interval=interval
         )
 
-        enter_event(second_event, self.timefunc, start_time)
+        self._enter_event(second_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -334,7 +316,7 @@ class CalendarScheduler:
         if (1 > interval) or (0 > second > 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -347,7 +329,7 @@ class CalendarScheduler:
             start_time, end_time, interval=SECONDS_IN_MINUTE*interval, second=second
         )
 
-        enter_event(minute_event, self.timefunc, start_time)
+        self._enter_event(minute_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -368,7 +350,7 @@ class CalendarScheduler:
         if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -381,7 +363,7 @@ class CalendarScheduler:
             start_time, end_time, tz, interval, second, minute, hour
         )
 
-        enter_event(daily_event, self.timefunc, start_time)
+        self._enter_event(daily_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -403,7 +385,7 @@ class CalendarScheduler:
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -416,7 +398,7 @@ class CalendarScheduler:
             start_time, end_time, tz, interval, second, minute, hour, day_of_week=day
         )
 
-        enter_event(daily_event, self.timefunc, start_time)
+        self._enter_event(daily_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -436,7 +418,7 @@ class CalendarScheduler:
         if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -449,7 +431,7 @@ class CalendarScheduler:
             start_time, end_time, tz, interval, second, minute
         )
 
-        enter_event(hourly_event, self.timefunc, start_time)
+        self._enter_event(hourly_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -472,7 +454,7 @@ class CalendarScheduler:
         if (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -485,7 +467,7 @@ class CalendarScheduler:
             start_time, end_time, tz, interval, second, minute, hour, day_of_month=day
         )
 
-        enter_event(monthly_event, self.timefunc, start_time)
+        self._enter_event(monthly_event, self.timefunc, start_time)
 
         self._push()
         return event
@@ -508,7 +490,7 @@ class CalendarScheduler:
         if (interval < 1) or not (1 <= month <= 12) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
-        event = Event(self._scheduler)
+        event = Event()
 
         if start_time is None:
             start_time = self.timefunc()
@@ -521,7 +503,7 @@ class CalendarScheduler:
             start_time, end_time, tz, interval, second, minute, hour, day_of_month=day, month=month
         )
 
-        enter_event(yearly_event, self.timefunc, start_time)
+        self._enter_event(yearly_event, self.timefunc, start_time)
 
         self._push()
         return event

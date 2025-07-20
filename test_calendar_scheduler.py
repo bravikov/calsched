@@ -31,7 +31,7 @@ class TestEveryMillisecond(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 0.2:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -49,7 +49,7 @@ class TestEveryMillisecond(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 0.003:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -69,7 +69,7 @@ class TestEverySecond(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 5.0:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -87,7 +87,7 @@ class TestEverySecond(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 5.0:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -106,7 +106,7 @@ class TestEverySecondFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_1(self):
@@ -139,7 +139,7 @@ class TestEveryMinute(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 300.0:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -158,7 +158,7 @@ class TestEveryMinuteFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_1(self):
@@ -196,7 +196,7 @@ class TestHourly(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 18000:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -215,7 +215,7 @@ class TestHourlyFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_1(self):
@@ -258,7 +258,7 @@ class TestDaily(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 432000.0:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -277,7 +277,7 @@ class TestDailyFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_1(self):
@@ -335,7 +335,7 @@ class TestWeekly(unittest.TestCase):
 
         def action():
             if time_controller.get_clock() >= 2160000.0:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
 
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
@@ -354,7 +354,7 @@ class TestWeeklyFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_first_occurrence_on_same_day(self):
@@ -421,7 +421,7 @@ class TestRealEveryMillisecond(unittest.TestCase):
             nonlocal count
             count += 1
             if count >= 50:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time.time())
             print(time.time())
 
@@ -444,7 +444,7 @@ class TestRealEverySecond(unittest.TestCase):
             nonlocal count
             count += 1
             if count >= 5:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time.time())
 
         scheduler = CalendarScheduler()
@@ -468,7 +468,7 @@ class TestRealEveryMinute(unittest.TestCase):
             nonlocal count
             count += 1
             if count >= 5:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time.time())
 
         scheduler = CalendarScheduler()
@@ -488,7 +488,7 @@ class TestMonthlyFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_first_occurrence_before(self):
@@ -530,7 +530,7 @@ class TestMonthly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 3:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -550,7 +550,7 @@ class TestMonthly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 2:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 31, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -569,7 +569,7 @@ class TestMonthly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 2:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1972, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -588,7 +588,7 @@ class TestMonthly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 3:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -608,7 +608,7 @@ class TestMonthly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 2:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -629,7 +629,7 @@ class TestYearly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 4:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -650,7 +650,7 @@ class TestYearly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 3:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -670,7 +670,7 @@ class TestYearly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 3:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -690,7 +690,7 @@ class TestYearly(unittest.TestCase):
         clocks = []
         def action():
             if len(clocks) >= 2:
-                events[0].cancel()
+                scheduler.cancel(events[0])
             clocks.append(time_controller.get_clock())
         scheduler = CalendarScheduler(timefunc=time_controller.get_clock, sleep_controller=time_controller)
         start_time = datetime.datetime(1970, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -712,7 +712,7 @@ class TestYearlyFirstTime(unittest.TestCase):
         self.clock = None
 
     def action(self):
-        self.event.cancel()
+        self.scheduler.cancel(self.event)
         self.clock = self.time_controller.get_clock()
 
     def test_first_occurrence_before(self):
@@ -759,7 +759,7 @@ class TestRealDaily(unittest.TestCase):
 
         def action():
             print(datetime.datetime.now())
-            events[0].cancel()
+            scheduler.cancel(events[0])
 
         scheduler = CalendarScheduler()
         event = scheduler.enter_daily_event(action=action, hour=18, minute=30, second=30)
@@ -768,77 +768,51 @@ class TestRealDaily(unittest.TestCase):
 
 
 class TestRunForever(unittest.TestCase):
-    def test_stop_before_run_forever(self):
+    def test_stop_before_run(self):
         scheduler = CalendarScheduler()
-        scheduler.stop()
-        scheduler.run_forever()
+        stub_event = scheduler.enter_hourly_event(action=lambda: None)
+        scheduler.cancel(stub_event)
+        scheduler.run()
 
     def test_stop_while_run_wait(self):
         scheduler = CalendarScheduler()
-        thread_running = threading.Event()
+        stub_event = scheduler.enter_hourly_event(action=lambda: None)
+        run_duration = 0
         def run():
-            thread_running.set()
-            scheduler.run_forever()
-        threading.Thread(name="scheduler", target=run).start()
-        thread_running.wait()
+            start_time = time.time()
+            scheduler.run()
+            nonlocal run_duration
+            run_duration = time.time() - start_time
+        thread = threading.Thread(name="scheduler", target=run)
+        thread.start()
         sleep(0.5)
-        scheduler.stop()
+        scheduler.cancel(stub_event)
+        thread.join()
+        self.assertAlmostEqual(0.5, run_duration, delta=0.01)
 
-    def test_stop_in_action(self):
+    def test_enter_and_cancel_many_events(self):
         scheduler = CalendarScheduler()
-        thread_running = threading.Event()
+        stub_event = scheduler.enter_hourly_event(action=lambda: None)
+        run_duration = 0
         def run():
-            thread_running.set()
-            scheduler.run_forever()
-        threading.Thread(name="scheduler", target=run).start()
-        thread_running.wait()
-        thread_running.clear()
+            start_time = time.time()
+            scheduler.run()
+            nonlocal run_duration
+            run_duration = time.time() - start_time
+        thread = threading.Thread(name="scheduler", target=run)
+        thread.start()
         sleep(0.5)
         events = []
-        count_action = 0
-        def action():
-            scheduler.stop()
-            events[0].cancel()
-            nonlocal count_action
-            count_action += 1
-            thread_running.set()
-        event = scheduler.enter_every_second_event(action=action)
-        events.append(event)
-        thread_running.wait()
-        self.assertEqual(1, count_action)
+        for i in range(100):
+            event = scheduler.enter_every_millisecond_event(action=lambda: None, interval=100)
+            events.append(event)
+        sleep(0.5)
+        for event in events:
+            scheduler.cancel(event)
+        scheduler.cancel(stub_event)
+        thread.join()
+        self.assertAlmostEqual(1.0, run_duration, delta=0.1)
 
-    def test_event_after_cancelled_event(self):
-        scheduler = CalendarScheduler()
-        thread_control = threading.Event()
-        def run():
-            thread_control.set()
-            scheduler.run_forever()
-        threading.Thread(name="scheduler", target=run).start()
-        thread_control.wait()
-        thread_control.clear()
-        sleep(0.5)
-        events = []
-        count_action = 0
-        def action():
-            events[0].cancel()
-            nonlocal count_action
-            count_action += 1
-            thread_control.set()
-        event = scheduler.enter_every_second_event(action=action)
-        events.append(event)
-        thread_control.wait()
-        thread_control.clear()
-        sleep(0.5)
-        def action2():
-            scheduler.stop()
-            events[1].cancel()
-            nonlocal count_action
-            count_action += 1
-            thread_control.set()
-        event = scheduler.enter_every_second_event(action=action2)
-        events.append(event)
-        thread_control.wait()
-        self.assertEqual(2, count_action)
 
 if __name__ == '__main__':
     # TODO: сделать прерывание по таймауту, так как тест может зависнуть.
