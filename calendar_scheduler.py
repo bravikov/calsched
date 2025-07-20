@@ -9,6 +9,11 @@ SECONDS_IN_MINUTE = 60
 
 
 class Event:
+    """
+    Represents a scheduled event in the calendar scheduler.
+    Contains synchronization primitives and internal state for event management.
+    Can be used to cancel the event using the CalendarScheduler.cancel() method.
+    """
     def __init__(self):
         self.lock = threading.Lock()
         self.internal_event: Optional[sched.Event] = None
@@ -188,23 +193,49 @@ class DefaultSleepController:
         self._terminate_sleep = threading.Event()  # Используется, чтобы прерывать функцию sleep.
 
     def sleep(self, seconds):
+        """
+        Sleep for the specified number of seconds.
+
+        :param seconds: Number of seconds to sleep.
+        """
         self._terminate_sleep.clear()
         self._terminate_sleep.wait(seconds)
 
     def interrupt(self):
+        """
+        Interrupt the sleep.
+        """
         self._terminate_sleep.set()
 
 
 class CalendarScheduler:
+    """
+    Calendar scheduler.
+    """
     def __init__(self, timefunc = time.time, sleep_controller=DefaultSleepController()):
+        """
+        Initialize the CalendarScheduler.
+
+        :param timefunc: Function to get the current time (default: time.time).
+        :param sleep_controller: Object handling sleep and interrupt logic (default: DefaultSleepController).
+        """
         self.timefunc = timefunc
         self.sleep_controller = sleep_controller
         self._scheduler = sched.scheduler(timefunc, self.sleep_controller.sleep)
 
     def run(self):
+        """
+        Start the scheduler and run all scheduled events until completion or cancellation.
+        This method blocks the calling thread until all scheduled events have been processed.
+        """
         self._scheduler.run()
 
     def cancel(self, event: Event):
+        """
+        Cancel a scheduled event.
+
+        :param event: The event instance returned by the enter_*() method.
+        """
         cancelled = False
         with event.lock:
             if event.canceled:
@@ -243,7 +274,6 @@ class CalendarScheduler:
             argument=(self._enter_event, event_settings, timefunc, next_time)
         )
 
-    # Слишком малые интервалы не имеют практического смысла, так как перестают соблюдаться. Поэтому интервал по умолчанию равен 100.
     def enter_every_millisecond_event(
             self,
             action,
@@ -253,6 +283,17 @@ class CalendarScheduler:
             start_time: float = None,
             end_time: float = None
     ):
+        """
+        Schedule an event to run every N milliseconds.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in milliseconds (default: 100). Very small intervals do not make practical sense.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if 1 > interval:
             return None
 
@@ -283,6 +324,17 @@ class CalendarScheduler:
             start_time: float = None,
             end_time: float = None
     ):
+        """
+        Schedule an event to run every N seconds.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in seconds (default: 1).
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if 1 > interval:
             return None
         event = Event()
@@ -313,6 +365,18 @@ class CalendarScheduler:
         start_time: float = None,
         end_time: float = None
     ):
+        """
+        Schedule an event to run every N minutes at a specific second.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in minutes (default: 1).
+        :param second: Second of the minute to run the event (default: 0). Range: 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if (1 > interval) or (0 > second > 59):
             return None
 
@@ -347,6 +411,21 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
+        """
+        Schedule an event to run daily (or every N days) at a specific time.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in days (default: 1).
+        :param hour: Hour of the day to run the event (default: 0). Range: 0-23.
+        :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
+        :param second: Second of the minute to run the event (default: 0). Range: 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event.
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
@@ -382,6 +461,22 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
+        """
+        Schedule an event to run weekly (or every N weeks) on a specific day and time.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in weeks (default: 1).
+        :param day: Day of the week to run the event (default: calendar.Day.MONDAY). Should be a value of the calendar.Day enum.
+        :param hour: Hour of the day to run the event (default: 0). Range: 0-23.
+        :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
+        :param second: Second of the minute to run the event (default: 0). Range: 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event.
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
             return None
 
@@ -415,6 +510,19 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
+        """
+
+        :param action:
+        :param action_args:
+        :param action_kwargs:
+        :param interval:
+        :param minute:
+        :param second:
+        :param start_time:
+        :param end_time:
+        :param tz:
+        :return:
+        """
         if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
@@ -451,6 +559,22 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
+        """
+        Schedule an event to run monthly (or every N months) on a specific day and time.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in months (default: 1).
+        :param day: Day of the month to run the event (default: 1). Should be in range 1-31.
+        :param hour: Hour of the day to run the event (default: 0). Should be in range 0-23.
+        :param minute: Minute of the hour to run the event (default: 0). Should be in range 0-59.
+        :param second: Second of the minute to run the event (default: 0). Should be in range 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event.
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
@@ -487,6 +611,23 @@ class CalendarScheduler:
         end_time: float = None,
         tz: datetime.tzinfo = None
     ):
+        """
+        Schedule an event to run yearly (or every N years) on a specific month, day, and time.
+
+        :param action: The function to execute, when the event is triggered.
+        :param action_args: Positional arguments for the action.
+        :param action_kwargs: Keyword arguments for the action.
+        :param interval: Interval in years (default: 1).
+        :param month: Month to run the event (default: 1). Should be in the range 1-12.
+        :param day: Day of the month to run the event (default: 1). Should be in the range 1-31.
+        :param hour: Hour of the day to run the event (default: 0). Should be in the range 0-23.
+        :param minute: Minute of the hour to run the event (default: 0). Should be in the range 0-59.
+        :param second: Second of the minute to run the event (default: 0). Should be in the range 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event.
+        :return: The scheduled event object, or None if parameters are invalid.
+        """
         if (interval < 1) or not (1 <= month <= 12) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
             return None
 
