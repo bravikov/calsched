@@ -398,6 +398,52 @@ class CalendarScheduler:
         self._push()
         return event
 
+    def enter_hourly_event(
+        self,
+        action,
+        action_args=(),
+        action_kwargs=_sentinel,
+        interval: int = 1,
+        minute: int = 0,
+        second: int = 0,
+        start_time: float = None,
+        end_time: float = None,
+        tz: datetime.tzinfo = None
+    ):
+        """
+
+        :param action:
+        :param action_args:
+        :param action_kwargs:
+        :param interval:
+        :param minute:
+        :param second:
+        :param start_time:
+        :param end_time:
+        :param tz:
+        :return:
+        """
+        if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+            return None
+
+        event = Event()
+
+        if start_time is None:
+            start_time = self.timefunc()
+
+        if end_time is not None and start_time >= end_time:
+            return None
+
+        hourly_event = InternalHourlyEvent(
+            event, action, action_args, action_kwargs,
+            start_time, end_time, tz, interval, second, minute
+        )
+
+        self._enter_event(hourly_event, self.timefunc, start_time)
+
+        self._push()
+        return event
+
     def enter_daily_event(
         self,
         action,
@@ -497,53 +543,6 @@ class CalendarScheduler:
 
         self._push()
         return event
-
-    def enter_hourly_event(
-        self,
-        action,
-        action_args=(),
-        action_kwargs=_sentinel,
-        interval: int = 1,
-        minute: int = 0,
-        second: int = 0,
-        start_time: float = None,
-        end_time: float = None,
-        tz: datetime.tzinfo = None
-    ):
-        """
-
-        :param action:
-        :param action_args:
-        :param action_kwargs:
-        :param interval:
-        :param minute:
-        :param second:
-        :param start_time:
-        :param end_time:
-        :param tz:
-        :return:
-        """
-        if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
-            return None
-
-        event = Event()
-
-        if start_time is None:
-            start_time = self.timefunc()
-
-        if end_time is not None and start_time >= end_time:
-            return None
-
-        hourly_event = InternalHourlyEvent(
-            event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute
-        )
-
-        self._enter_event(hourly_event, self.timefunc, start_time)
-
-        self._push()
-        return event
-
 
     def enter_monthly_event(
         self,
