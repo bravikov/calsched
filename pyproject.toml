@@ -1,6 +1,20 @@
 [project]
 name = "calendar-scheduler"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "Calendar scheduler"
+readme = "README.md"
+authors = [
+    { name = "Dmitry Bravikov", email = "dmitry@bravikov.ru" }
+]
 requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
