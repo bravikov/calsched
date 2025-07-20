@@ -1,5 +1,5 @@
 [project]
-name = "calendar-scheduler"
+name = "calsched"
 version = "1.0.0"
 description = "Calendar scheduler"
 readme = "README.md"
@@ -18,3 +18,13 @@ dependencies = []
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+exclude = [
+    "TODO.md",
+    "Аналитика.md",
+    "DEVGUIDE.md",
+    "CLAUDE.md",
+    ".gitignore",
+    ".python-version",
+]

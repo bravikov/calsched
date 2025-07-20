@@ -5,7 +5,7 @@ import time
 import calendar
 from time import sleep
 
-from calendar_scheduler import CalendarScheduler
+from calsched import CalendarScheduler
 
 
 class TestTimeController:
