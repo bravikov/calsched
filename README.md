@@ -1,5 +1,7 @@
 # Calendar Scheduler for Recurring Events
 
+[![PyPI version](https://img.shields.io/pypi/v/calsched.svg)](https://pypi.org/project/calsched/)
+
 ## Features
 
 - Executes an action function on a schedule.

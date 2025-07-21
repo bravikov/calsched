@@ -28,3 +28,7 @@ exclude = [
     ".gitignore",
     ".python-version",
 ]
+
+[project.urls]
+Repository = "https://github.com/bravikov/calsched"
+Issues = "https://github.com/bravikov/calsched/issues"
