@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/calsched.svg)](https://pypi.org/project/calsched/)
 [![Pylint](https://github.com/bravikov/calsched/actions/workflows/pylint.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/pylint.yml)
-[![Unit Tests](https://github.com/bravikov/calsched/actions/workflows/unittests.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/unittests.yml)
+[![Unit tests](https://github.com/bravikov/calsched/actions/workflows/unittests.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/unittests.yml)
 
 ## Features
 
