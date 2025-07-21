@@ -1,6 +1,7 @@
 # Calendar Scheduler for Recurring Events
 
 [![PyPI version](https://img.shields.io/pypi/v/calsched.svg)](https://pypi.org/project/calsched/)
+[![Pylint](https://github.com/bravikov/calsched/actions/workflows/pylint.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/pylint.yml)
 
 ## Features
 
