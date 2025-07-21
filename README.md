@@ -4,6 +4,8 @@
 [![Pylint](https://github.com/bravikov/calsched/actions/workflows/pylint.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/pylint.yml)
 [![Unit tests](https://github.com/bravikov/calsched/actions/workflows/unittests.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/unittests.yml)
 
+[![en](https://img.shields.io/badge/lang-ru-blue.svg)](README_ru.md)
+
 ## Features
 
 - Executes an action function on a schedule.
