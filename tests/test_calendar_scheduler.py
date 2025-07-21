@@ -803,7 +803,7 @@ class TestRunForever(unittest.TestCase):
         thread.start()
         sleep(0.5)
         events = []
-        for i in range(100):
+        for _ in range(100):
             event = scheduler.enter_every_millisecond_event(action=lambda: None, interval=100)
             events.append(event)
         sleep(0.5)
@@ -815,5 +815,4 @@ class TestRunForever(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # TODO: сделать прерывание по таймауту, так как тест может зависнуть.
     unittest.main()

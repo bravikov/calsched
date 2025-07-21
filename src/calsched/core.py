@@ -1,4 +1,11 @@
-import sched, time, datetime
+"""
+Calendar Scheduler core module.
+This module provides the core functionality for scheduling recurring events.
+"""
+
+import sched
+import time
+import datetime
 import calendar
 from dataclasses import dataclass
 import threading
@@ -7,17 +14,16 @@ from typing import Optional, Any
 
 SECONDS_IN_MINUTE = 60
 
-
+@dataclass(slots=True)
 class Event:
     """
     Represents a scheduled event in the calendar scheduler.
     Contains synchronization primitives and internal state for event management.
     Can be used to cancel the event using the CalendarScheduler.cancel() method.
     """
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.internal_event: Optional[sched.Event] = None
-        self.canceled = False
+    lock: threading.Lock = threading.Lock()
+    internal_event: Optional[sched.Event] = None
+    canceled: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -97,7 +103,9 @@ class InternalHourlyEvent(EventSettings):
 class InternalDailyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
-        target_time = dt_base_time.replace(hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+        target_time = dt_base_time.replace(
+            hour=self.hour, minute=self.minute, second=self.second, microsecond=0
+        )
 
         past_event = False
         if self.event.internal_event is not None:
@@ -116,7 +124,9 @@ class InternalWeeklyEvent(EventSettings):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
         days_ahead = (self.day_of_week.value - dt_base_time.weekday()) % 7
         target_date = dt_base_time + datetime.timedelta(days=days_ahead)
-        target_time = target_date.replace(hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+        target_time = target_date.replace(
+            hour=self.hour, minute=self.minute, second=self.second, microsecond=0
+        )
 
         past_event = False
         if self.event.internal_event is not None:
@@ -135,7 +145,9 @@ class InternalMonthlyEvent(EventSettings):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
         last_day = calendar.monthrange(dt_base_time.year, dt_base_time.month)[1]
         limit_day = min(self.day_of_month, last_day)
-        target_time = dt_base_time.replace(day=limit_day, hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+        target_time = dt_base_time.replace(
+            day=limit_day, hour=self.hour, minute=self.minute, second=self.second, microsecond=0
+        )
         past_event = False
         if self.event.internal_event is not None:
             if target_time <= dt_base_time:
@@ -148,7 +160,10 @@ class InternalMonthlyEvent(EventSettings):
             next_month = (next_month - 1) % 12 + 1
             last_day = calendar.monthrange(next_year, next_month)[1]
             limit_day = min(self.day_of_month, last_day)
-            target_time = datetime.datetime(next_year, next_month, limit_day, self.hour, self.minute, self.second, tzinfo=self.tz)
+            target_time = datetime.datetime(
+                next_year, next_month, limit_day, self.hour, self.minute, self.second,
+                tzinfo=self.tz
+            )
         return target_time.timestamp()
 
 
@@ -158,7 +173,10 @@ class InternalYearlyEvent(EventSettings):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
         last_day = calendar.monthrange(dt_base_time.year, self.month)[1]
         limit_day = min(self.day_of_month, last_day)
-        target_time = dt_base_time.replace(month=self.month, day=limit_day, hour=self.hour, minute=self.minute, second=self.second, microsecond=0)
+        target_time = dt_base_time.replace(
+            month=self.month, day=limit_day, hour=self.hour,
+            minute=self.minute, second=self.second, microsecond=0
+        )
         past_event = False
         if self.event.internal_event is not None:
             if target_time <= dt_base_time:
@@ -169,7 +187,10 @@ class InternalYearlyEvent(EventSettings):
             next_year = dt_base_time.year + self.interval
             last_day = calendar.monthrange(next_year, self.month)[1]
             limit_day = min(self.day_of_month, last_day)
-            target_time = datetime.datetime(next_year, self.month, limit_day, self.hour,self. minute, self.second, tzinfo=self.tz)
+            target_time = datetime.datetime(
+                next_year, self.month, limit_day, self.hour, self. minute, self.second,
+                tzinfo=self.tz
+            )
         return target_time.timestamp()
 
 
@@ -217,7 +238,8 @@ class CalendarScheduler:
         Initialize the CalendarScheduler.
 
         :param timefunc: Function to get the current time (default: time.time).
-        :param sleep_controller: Object handling sleep and interrupt logic (default: DefaultSleepController).
+        :param sleep_controller: Object handling sleep and interrupt logic
+                                 (default: DefaultSleepController).
         """
         self.timefunc = timefunc
         self.sleep_controller = sleep_controller
@@ -290,9 +312,12 @@ class CalendarScheduler:
         :param action: The function to execute, when the event is triggered.
         :param action_args: Positional arguments for the action.
         :param action_kwargs: Keyword arguments for the action.
-        :param interval: Interval in milliseconds (default: 100). Very small intervals do not make practical sense.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param interval: Interval in milliseconds (default: 100).
+                         Very small intervals do not make practical sense.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if 1 > interval:
@@ -332,8 +357,10 @@ class CalendarScheduler:
         :param action_args: Positional arguments for the action.
         :param action_kwargs: Keyword arguments for the action.
         :param interval: Interval in seconds (default: 1).
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if 1 > interval:
@@ -374,11 +401,13 @@ class CalendarScheduler:
         :param action_kwargs: Keyword arguments for the action.
         :param interval: Interval in minutes (default: 1).
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
         :return: The scheduled event object, or None if parameters are invalid.
         """
-        if (1 > interval) or (0 > second > 59):
+        if (1 > interval) or not (0 <= second <= 59):
             return None
 
         event = Event()
@@ -420,9 +449,12 @@ class CalendarScheduler:
         :param interval: Interval in hours (default: 1).
         :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time.
+                   Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
         if (1 > interval) or not (0 <= minute <= 59) or not (0 <= second <= 59):
@@ -469,12 +501,18 @@ class CalendarScheduler:
         :param hour: Hour of the day to run the event (default: 0). Range: 0-23.
         :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time.
+                   Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
-        if (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+        if (
+            (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59)
+            or not (0 <= second <= 59)
+        ):
             return None
 
         event = Event()
@@ -516,16 +554,23 @@ class CalendarScheduler:
         :param action_args: Positional arguments for the action.
         :param action_kwargs: Keyword arguments for the action.
         :param interval: Interval in weeks (default: 1).
-        :param day: Day of the week to run the event (default: calendar.Day.MONDAY). Should be a value of the calendar.Day enum.
+        :param day: Day of the week to run the event (default: calendar.Day.MONDAY).
+                    Should be a value of the calendar.Day enum.
         :param hour: Hour of the day to run the event (default: 0). Range: 0-23.
         :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time.
+                   Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
-        if (1 > interval) or (0 > hour > 23) or (0 > minute > 59) or (0 > second > 59):
+        if (
+            (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59)
+            or not (0 <= second <= 59) or not isinstance(day, calendar.Day)
+        ):
             return None
 
         event = Event()
@@ -571,12 +616,18 @@ class CalendarScheduler:
         :param hour: Hour of the day to run the event (default: 0). Should be in range 0-23.
         :param minute: Minute of the hour to run the event (default: 0). Should be in range 0-59.
         :param second: Second of the minute to run the event (default: 0). Should be in range 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time.
+                   Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
-        if (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+        if (
+            (interval < 1) or not (1 <= day <= 31) or not (0 <= hour <= 23)
+            or not (0 <= minute <= 59) or not (0 <= second <= 59)
+        ):
             return None
 
         event = Event()
@@ -622,14 +673,22 @@ class CalendarScheduler:
         :param month: Month to run the event (default: 1). Should be in the range 1-12.
         :param day: Day of the month to run the event (default: 1). Should be in the range 1-31.
         :param hour: Hour of the day to run the event (default: 0). Should be in the range 0-23.
-        :param minute: Minute of the hour to run the event (default: 0). Should be in the range 0-59.
-        :param second: Second of the minute to run the event (default: 0). Should be in the range 0-59.
-        :param start_time: Start time for the event as a POSIX timestamp (default: now). Should be the value returned by time.time() or datetime.timestamp().
-        :param end_time: End time for the event as a POSIX timestamp (default: no limit). Should be the value returned by time.time() or datetime.timestamp().
-        :param tz: Time zone information for the event. None means local time. Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
+        :param minute: Minute of the hour to run the event (default: 0).
+                       Should be in the range 0-59.
+        :param second: Second of the minute to run the event (default: 0).
+                       Should be in the range 0-59.
+        :param start_time: Start time for the event as a POSIX timestamp (default: now).
+                           Should be the value returned by time.time() or datetime.timestamp().
+        :param end_time: End time for the event as a POSIX timestamp (default: no limit).
+                         Should be the value returned by time.time() or datetime.timestamp().
+        :param tz: Time zone information for the event. None means local time.
+                   Otherwise, should be an instance of tzinfo. For UTC, use datetime.timezone.utc.
         :return: The scheduled event object, or None if parameters are invalid.
         """
-        if (interval < 1) or not (1 <= month <= 12) or not (1 <= day <= 31) or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59):
+        if (
+            (interval < 1) or not (1 <= month <= 12) or not (1 <= day <= 31)
+            or not (0 <= hour <= 23) or not (0 <= minute <= 59) or not (0 <= second <= 59)
+        ):
             return None
 
         event = Event()
