@@ -11,3 +11,14 @@ or, if you're using uv:
 Run tests:
 
     python3 tests/test_calendar_scheduler.py
+
+Publick on PyPi:
+
+    # Build
+    uv build
+
+    # Preview
+    tar -tzf dist/calsched-*.tar.gz
+
+    # Publish
+    uv publish
