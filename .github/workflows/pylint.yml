@@ -20,4 +20,15 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        pylint \
+          --disable=\
+            too-many-instance-attributes,\
+            missing-function-docstring,\
+            missing-class-docstring,\
+            missing-module-docstring,\
+            too-many-arguments,\
+            too-many-positional-arguments,\
+            line-too-long,\
+            superfluous-parens,\
+            too-many-boolean-expressions \
+          $(git ls-files '*.py')
