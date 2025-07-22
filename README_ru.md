@@ -91,14 +91,14 @@
 
 Для добавления событий используются методы `enter_*_event()`:
 
-- `enter_every_millisecond_event(action=my_action, interval=N)`: my_action() будет запускаться с интервалом N миллисекунд.
-- `enter_every_second_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N секунд.
-- `enter_every_minute_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N минут.
-- `enter_hourly_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N часов.
-- `enter_daily_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N дней.
-- `enter_weekly_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N недель.
-- `enter_monthly_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N месяцев.
-- `enter_yearly_event(action=my_action, interval=N)`: my_action() будет запускаться с периодом N лет.
+- `enter_every_millisecond_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N миллисекунд.
+- `enter_every_second_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N секунд.
+- `enter_every_minute_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N минут.
+- `enter_hourly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N часов.
+- `enter_daily_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N дней.
+- `enter_weekly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N недель.
+- `enter_monthly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N месяцев.
+- `enter_yearly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N лет.
 
 Параметр interval должен быть больше 1 и сверху ничем не ограничен.
 
