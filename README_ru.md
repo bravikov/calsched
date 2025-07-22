@@ -39,15 +39,17 @@
 
 Пример, который раз в секунду выводит текущее время:
 
-    import datetime
-    from calsched import CalendarScheduler
-    
-    def print_time():
-        print(datetime.datetime.now())
+```python
+import datetime
+from calsched import CalendarScheduler
 
-    scheduler = CalendarScheduler()
-    scheduler.enter_every_second_event(action=print_time)
-    scheduler.run()
+def print_time():
+    print(datetime.datetime.now())
+
+scheduler = CalendarScheduler()
+scheduler.enter_every_second_event(action=print_time)
+scheduler.run()
+```
 
 В этом случае run() заблокирует поток, в котором он запущен.
 
@@ -67,25 +69,27 @@
 
 Пример запуска в отдельном потоке:
 
-    import datetime
-    import threading
-    from time import sleep
-    from calsched import CalendarScheduler
-    
-    def print_time():
-        print(datetime.datetime.now())
+```python
+import datetime
+import threading
+from time import sleep
+from calsched import CalendarScheduler
 
-    scheduler = CalendarScheduler()
-    stub_event = scheduler.enter_hourly_event(action=lambda:None)
-    thread = threading.Thread(target=scheduler.run)
-    thread.start()
-    sleep(1.0)
+def print_time():
+    print(datetime.datetime.now())
 
-    event = scheduler.enter_every_second_event(action=print_time)
-    sleep(5.0)
-    scheduler.cancel(stub_event)
-    scheduler.cancel(event)
-    thread.join()
+scheduler = CalendarScheduler()
+stub_event = scheduler.enter_hourly_event(action=lambda:None)
+thread = threading.Thread(target=scheduler.run)
+thread.start()
+sleep(1.0)
+
+event = scheduler.enter_every_second_event(action=print_time)
+sleep(5.0)
+scheduler.cancel(stub_event)
+scheduler.cancel(event)
+thread.join()
+```
 
 ## Добавление событий
 
@@ -100,21 +104,23 @@
 - `enter_monthly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N месяцев.
 - `enter_yearly_event(action=my_action, interval=N)` – my_action() будет запускаться с периодом N лет.
 
-Параметр interval должен быть больше 1 и сверху ничем не ограничен.
+Параметр interval должен быть больше или равен 1 и сверху ничем не ограничен.
 
-По умолчанию интервал равен 1. То есть, если не указать параметр interval, то событие будет запускаться с периодом 1 секунда, 1 минута и так далее в зависимости от метода. Кроме, метода `enter_every_millisecond_event()`, где по умолчанию интервал равен 100 миллисекунд, поскольку интервал в 1 миллисекунду не возможно выдержать на реальных машинах.
+По умолчанию интервал равен 1. То есть, если не указать параметр interval, то событие будет запускаться с периодом 1 секунда, 1 минута и так далее в зависимости от метода. Кроме метода `enter_every_millisecond_event()`, где по умолчанию интервал равен 100 миллисекунд, поскольку интервал в 1 миллисекунду не возможно выдержать на реальных машинах.
 
 Пример ежедневного события, которое выводит текущее время:
 
-    import datetime
-    from calsched import CalendarScheduler
+```python
+import datetime
+from calsched import CalendarScheduler
     
-    def print_time():
-        print(datetime.datetime.now())
+def print_time():
+    print(datetime.datetime.now())
 
-    scheduler = CalendarScheduler()
-    scheduler.enter_daily_event(action=print_time)
-    scheduler.run()
+scheduler = CalendarScheduler()
+scheduler.enter_daily_event(action=print_time)
+scheduler.run()
+```
 
 ### Параметры времени
 
@@ -146,7 +152,7 @@
 - `day` принимает значения из перечисления `calendar.Day` (в методе `enter_weekly_event()`),
 - 1 <= `month` <= 12.
 
-В методах `enter_monthly_event()` и `enter_yearly_event()` если указан день больше, чем количество дней в месяце, то событие будет выполняться в последний день месяца. Например, если указать `day=31`, то событие будет выполняться 31 января и 28 февраля или (29 февраля в високосный год).
+В методах `enter_monthly_event()` и `enter_yearly_event()` если указан день больше, чем количество дней в месяце, то событие будет выполняться в последний день месяца. Например, если указать `day=31`, то событие выполнится 31 января, затем 28 февраля или 29 февраля (в високосный год).
 
 ### Начало и конец периодического события
 
@@ -173,10 +179,12 @@
 
 Пример события, которое выполняется каждый день в 04:00:00 и передает аргумент "Hello":
 
-    def my_action(arg1, arg2, arg3):
-        print(message)
+```python
+def my_action(arg1, arg2, arg3):
+    pass
 
-    scheduler.enter_daily_event(action=my_action, action_args=("Hello",), action_kwargs={"arg2": 123})
+scheduler.enter_daily_event(action=my_action, action_args=("Hello",), action_kwargs={"arg2": 123})
+```
 
 Планировщик вызовет функцию `my_action()` следующим образом:
 
