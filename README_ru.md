@@ -177,7 +177,7 @@ scheduler.run()
 
 Все методы `enter_*_event()` позволяют задать `action_args` и `action_kwargs`.
 
-Пример события, которое выполняется каждый день в 04:00:00 и передает аргумент "Hello":
+Пример:
 
 ```python
 def my_action(arg1, arg2, arg3):
