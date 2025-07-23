@@ -180,7 +180,7 @@ scheduler.run()
 Пример:
 
 ```python
-def my_action(arg1, arg2, arg3):
+def my_action(arg1, arg2):
     pass
 
 scheduler.enter_daily_event(action=my_action, action_args=("Hello",), action_kwargs={"arg2": 123})
