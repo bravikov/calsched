@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 SECONDS_IN_MINUTE = 60
 
-@dataclass(slots=True)
+@dataclass()
 class Event:
     """
     Represents a scheduled event in the calendar scheduler.
@@ -26,12 +26,12 @@ class Event:
     canceled: bool = False
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class EventSettings:
     event: Event
     action: Any
-    action_args: tuple[Any]
-    action_kwargs: Any
+    action_args: Any # tuple
+    action_kwargs: Any # dict
     start_time: float
     end_time: Optional[float]
     tz: Optional[datetime.tzinfo] = None
@@ -39,12 +39,12 @@ class EventSettings:
     second: int = 0
     minute: int = 0
     hour: int = 0
-    day_of_week: calendar.Day = calendar.Day.MONDAY
-    day_of_month: int = 1
+    weekday: int = 0
+    day: int = 1
     month: int = 1
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEveryMillisecondEvent(EventSettings):
     interval_ms: float = None
 
@@ -52,7 +52,7 @@ class InternalEveryMillisecondEvent(EventSettings):
         return run_time + self.interval_ms
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEverySecondEvent(EventSettings):
     def next_time(self, run_time):
         target_time = run_time // 1 # remove milliseconds
@@ -67,7 +67,7 @@ class InternalEverySecondEvent(EventSettings):
         return target_time
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEveryMinuteEvent(EventSettings):
     def next_time(self, run_time):
         minute_start = run_time // SECONDS_IN_MINUTE * SECONDS_IN_MINUTE
@@ -83,7 +83,7 @@ class InternalEveryMinuteEvent(EventSettings):
         return target_time
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalHourlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -99,7 +99,7 @@ class InternalHourlyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalDailyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -118,11 +118,11 @@ class InternalDailyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalWeeklyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
-        days_ahead = (self.day_of_week.value - dt_base_time.weekday()) % 7
+        days_ahead = (self.weekday - dt_base_time.weekday()) % 7
         target_date = dt_base_time + datetime.timedelta(days=days_ahead)
         target_time = target_date.replace(
             hour=self.hour, minute=self.minute, second=self.second, microsecond=0
@@ -139,12 +139,12 @@ class InternalWeeklyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalMonthlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
         last_day = calendar.monthrange(dt_base_time.year, dt_base_time.month)[1]
-        limit_day = min(self.day_of_month, last_day)
+        limit_day = min(self.day, last_day)
         target_time = dt_base_time.replace(
             day=limit_day, hour=self.hour, minute=self.minute, second=self.second, microsecond=0
         )
@@ -159,7 +159,7 @@ class InternalMonthlyEvent(EventSettings):
             next_year = dt_base_time.year + (next_month - 1) // 12
             next_month = (next_month - 1) % 12 + 1
             last_day = calendar.monthrange(next_year, next_month)[1]
-            limit_day = min(self.day_of_month, last_day)
+            limit_day = min(self.day, last_day)
             target_time = datetime.datetime(
                 next_year, next_month, limit_day, self.hour, self.minute, self.second,
                 tzinfo=self.tz
@@ -167,12 +167,12 @@ class InternalMonthlyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalYearlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
         last_day = calendar.monthrange(dt_base_time.year, self.month)[1]
-        limit_day = min(self.day_of_month, last_day)
+        limit_day = min(self.day, last_day)
         target_time = dt_base_time.replace(
             month=self.month, day=limit_day, hour=self.hour,
             minute=self.minute, second=self.second, microsecond=0
@@ -186,7 +186,7 @@ class InternalYearlyEvent(EventSettings):
         if past_event:
             next_year = dt_base_time.year + self.interval
             last_day = calendar.monthrange(next_year, self.month)[1]
-            limit_day = min(self.day_of_month, last_day)
+            limit_day = min(self.day, last_day)
             target_time = datetime.datetime(
                 next_year, self.month, limit_day, self.hour, self. minute, self.second,
                 tzinfo=self.tz
@@ -248,7 +248,7 @@ class CalendarScheduler:
     def run(self):
         """
         Start the scheduler and run all scheduled events until completion.
-        Completion means that all events have either been cancelled or have reached their end_time.
+        Completion means that all events have either been canceled or have reached their end_time.
         This method blocks the calling thread until all scheduled events have been processed.
         """
         self._scheduler.run()
@@ -539,7 +539,7 @@ class CalendarScheduler:
         action_args=(),
         action_kwargs=_sentinel,
         interval: int = 1,
-        day: calendar.Day = calendar.Day.MONDAY,
+        weekday: int = 0,
         hour: int = 0,
         minute: int = 0,
         second: int = 0,
@@ -550,12 +550,12 @@ class CalendarScheduler:
         """
         Schedule an event to run weekly (or every N weeks) on a specific day and time.
 
-        :param action: The function to execute, when the event is triggered.
+        :param action: The function to execute when the event is triggered.
         :param action_args: Positional arguments for the action.
         :param action_kwargs: Keyword arguments for the action.
         :param interval: Interval in weeks (default: 1).
-        :param day: Day of the week to run the event (default: calendar.Day.MONDAY).
-                    Should be a value of the calendar.Day enum.
+        :param weekday: Day of the week as an integer, where Monday is 0, and Sunday is 6
+                        Default: 0 (Monday).
         :param hour: Hour of the day to run the event (default: 0). Range: 0-23.
         :param minute: Minute of the hour to run the event (default: 0). Range: 0-59.
         :param second: Second of the minute to run the event (default: 0). Range: 0-59.
@@ -569,7 +569,7 @@ class CalendarScheduler:
         """
         if (
             (1 > interval) or not (0 <= hour <= 23) or not (0 <= minute <= 59)
-            or not (0 <= second <= 59) or not isinstance(day, calendar.Day)
+            or not (0 <= second <= 59) or not (0 <= weekday <= 6)
         ):
             return None
 
@@ -583,7 +583,7 @@ class CalendarScheduler:
 
         daily_event = InternalWeeklyEvent(
             event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute, hour, day_of_week=day
+            start_time, end_time, tz, interval, second, minute, hour, weekday=weekday
         )
 
         self._enter_event(daily_event, self.timefunc, start_time)
@@ -640,7 +640,7 @@ class CalendarScheduler:
 
         monthly_event = InternalMonthlyEvent(
             event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute, hour, day_of_month=day
+            start_time, end_time, tz, interval, second, minute, hour, day=day
         )
 
         self._enter_event(monthly_event, self.timefunc, start_time)
@@ -701,7 +701,7 @@ class CalendarScheduler:
 
         yearly_event = InternalYearlyEvent(
             event, action, action_args, action_kwargs,
-            start_time, end_time, tz, interval, second, minute, hour, day_of_month=day, month=month
+            start_time, end_time, tz, interval, second, minute, hour, day=day, month=month
         )
 
         self._enter_event(yearly_event, self.timefunc, start_time)
