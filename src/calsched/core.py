@@ -30,8 +30,8 @@ class Event:
 class EventSettings:
     event: Event
     action: Any
-    action_args: tuple[Any]
-    action_kwargs: Any
+    action_args: Any # tuple
+    action_kwargs: Any # dict
     start_time: float
     end_time: Optional[float]
     tz: Optional[datetime.tzinfo] = None
