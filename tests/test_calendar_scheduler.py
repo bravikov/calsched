@@ -2,7 +2,6 @@ import datetime
 import threading
 import unittest
 import time
-import calendar
 from time import sleep
 
 from calsched import CalendarScheduler
@@ -358,33 +357,29 @@ class TestWeeklyFirstTime(unittest.TestCase):
         self.clock = self.time_controller.get_clock()
 
     def test_first_occurrence_on_same_day(self):
-        # Четверг, 00:00:00, start_time = 0, day=THURSDAY
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc,start_time=0, day=calendar.Day.THURSDAY, hour=0, minute=0, second=0)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc,start_time=0, weekday=3, hour=0, minute=0, second=0)
         self.scheduler.run()
         self.assertEqual(self.clock, 0.0)
 
     def test_first_occurrence_on_monday(self):
-        # Четверг, 00:00:00, start_time = 0, day=MONDAY
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc,start_time=0, day=calendar.Day.MONDAY, hour=0, minute=0, second=0)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc,start_time=0, weekday=0, hour=0, minute=0, second=0)
         self.scheduler.run()
         self.assertEqual(self.clock, 4*86400.0)  # До следующего понедельника
 
     def test_next_week(self):
-        # Четверг, 00:00:01, day=THURSDAY, значит, следующее срабатывание через неделю
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=1, day=calendar.Day.THURSDAY, hour=0, minute=0, second=0)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=1, weekday=3, hour=0, minute=0, second=0)
         self.scheduler.run()
         self.assertEqual(self.clock, 604800.0)  # 7*24*3600
 
     def test_other_weekday(self):
-        # Четверг -> суббота
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=0, day=calendar.Day.SATURDAY, hour=0, minute=0, second=0)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=0, weekday=5, hour=0, minute=0, second=0)
         self.scheduler.run()
         self.assertEqual(self.clock, 2*86400.0)
 
     def test_with_time(self):
         # Стартуем в пятницу, ищем понедельник 12:34:56
         friday = 1*86400
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.MONDAY, hour=12, minute=34, second=56)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, weekday=0, hour=12, minute=34, second=56)
         self.scheduler.run()
         # Пятница -> понедельник = 3 дня, плюс время
         expected = friday + 3*86400 + 12*3600 + 34*60 + 56
@@ -393,20 +388,20 @@ class TestWeeklyFirstTime(unittest.TestCase):
     def test_interval_2_weeks(self):
         # Стартуем в пятницу, ищем пятницу, интервал 2 недели
         friday = 1*86400
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.FRIDAY, hour=0, minute=0, second=0, interval=2)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, weekday=4, hour=0, minute=0, second=0, interval=2)
         self.scheduler.run()
         self.assertEqual(self.clock, friday)
         # Следующее срабатывание будет через 2 недели
 
     def test_start_time_equal_action_time_interval_1(self):
         friday = 1*86400
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.FRIDAY)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, weekday=4)
         self.scheduler.run()
         self.assertEqual(self.clock, friday)
 
     def test_start_time_equal_action_time_interval_2(self):
         friday = 1*86400
-        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, day=calendar.Day.FRIDAY, interval=2)
+        self.event = self.scheduler.enter_weekly_event(action=self.action, tz=datetime.timezone.utc, start_time=friday, weekday=4, interval=2)
         self.scheduler.run()
         self.assertEqual(self.clock, friday)
 
@@ -819,6 +814,7 @@ class TestTimeParameters(unittest.TestCase):
         self.scheduler = CalendarScheduler()
         self.months = [-1, 0, 13]
         self.days = [-1, 0, 32]
+        self.weekdays = [-1, 7]
         self.hours = [-1, 24]
         self.minutes = [-1, 60]
         self.seconds = [-1, 60]
@@ -831,6 +827,9 @@ class TestTimeParameters(unittest.TestCase):
         for day in self.days:
             self.assertIsNone(self.scheduler.enter_yearly_event(action=None, day=day))
             self.assertIsNone(self.scheduler.enter_monthly_event(action=None, day=day))
+
+        for weekday in self.weekdays:
+            self.assertIsNone(self.scheduler.enter_weekly_event(action=None, weekday=weekday))
 
         for hour in self.hours:
             self.assertIsNone(self.scheduler.enter_yearly_event(action=None, hour=hour))

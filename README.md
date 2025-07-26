@@ -168,8 +168,8 @@ Time parameter value ranges:
 - 0 <= `second` <= 59,
 - 0 <= `minute` <= 59,
 - 0 <= `hour` <= 23,
-- 1 <= `day` <= 31 (for `enter_monthly_event()` and `enter_yearly_event()`),
-- `day` can be a value from the `calendar.Day` enumeration (for `enter_weekly_event()`),
+- 1 <= `day` <= 31,
+- 0 <= `weekday` <= 6 (Monday is 0, Sunday is 6),
 - 1 <= `month` <= 12.
 
 In `enter_monthly_event()` and `enter_yearly_event()`, if the specified day is greater than the number of days in the month, the event will be executed on the last day of the month. For example, if you specify `day=31`, the event will run on January 31, then on February 28 or 29 (in a leap year).
