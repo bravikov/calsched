@@ -156,7 +156,7 @@ For monthly events, you can specify day, hour, minute, and second. Example: an e
 
 For monthly events, you cannot specify `month`, as it does not make sense. Similarly for other event types:
 
-    scheduler.enter_weekly_event(action=my_action, day=calendar.Day.THURSDAY, hour=4, minute=0, second=0)
+    scheduler.enter_weekly_event(action=my_action, weekday=3, hour=4, minute=0, second=0)
     scheduler.enter_daily_event(action=my_action, hour=4, minute=0, second=0)
     scheduler.enter_hourly_event(action=my_action, minute=0, second=0)
     scheduler.enter_every_minute_event(action=my_action, second=0)

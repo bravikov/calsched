@@ -136,7 +136,7 @@ scheduler.run()
 
 Для ежемесячных событий нельзя задать month, поскольку это не имеет смысла. Аналогично для остальных типов событий:
 
-    scheduler.enter_weekly_event(action=my_action, day=calendar.Day.THURSDAY, hour=4, minute=0, second=0)
+    scheduler.enter_weekly_event(action=my_action, weekday=3, hour=4, minute=0, second=0)
     scheduler.enter_daily_event(action=my_action, hour=4, minute=0, second=0)
     scheduler.enter_hourly_event(action=my_action, minute=0, second=0)
     scheduler.enter_every_minute_event(action=my_action, second=0)
