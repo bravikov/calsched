@@ -814,5 +814,45 @@ class TestRunForever(unittest.TestCase):
         self.assertAlmostEqual(1.0, run_duration, delta=0.1)
 
 
+class TestTimeParameters(unittest.TestCase):
+    def setUp(self):
+        self.scheduler = CalendarScheduler()
+        self.months = [-1, 0, 13]
+        self.days = [-1, 0, 32]
+        self.hours = [-1, 24]
+        self.minutes = [-1, 60]
+        self.seconds = [-1, 60]
+
+
+    def test_yearly(self):
+        for month in self.months:
+            self.assertIsNone(self.scheduler.enter_yearly_event(action=None, month=month))
+
+        for day in self.days:
+            self.assertIsNone(self.scheduler.enter_yearly_event(action=None, day=day))
+            self.assertIsNone(self.scheduler.enter_monthly_event(action=None, day=day))
+
+        for hour in self.hours:
+            self.assertIsNone(self.scheduler.enter_yearly_event(action=None, hour=hour))
+            self.assertIsNone(self.scheduler.enter_monthly_event(action=None, hour=hour))
+            self.assertIsNone(self.scheduler.enter_weekly_event(action=None, hour=hour))
+            self.assertIsNone(self.scheduler.enter_daily_event(action=None, hour=hour))
+
+        for minute in self.minutes:
+            self.assertIsNone(self.scheduler.enter_yearly_event(action=None, minute=minute))
+            self.assertIsNone(self.scheduler.enter_monthly_event(action=None, minute=minute))
+            self.assertIsNone(self.scheduler.enter_weekly_event(action=None, minute=minute))
+            self.assertIsNone(self.scheduler.enter_daily_event(action=None, minute=minute))
+            self.assertIsNone(self.scheduler.enter_hourly_event(action=None, minute=minute))
+
+        for second in self.seconds:
+            self.assertIsNone(self.scheduler.enter_yearly_event(action=None, second=second))
+            self.assertIsNone(self.scheduler.enter_monthly_event(action=None, second=second))
+            self.assertIsNone(self.scheduler.enter_weekly_event(action=None, second=second))
+            self.assertIsNone(self.scheduler.enter_daily_event(action=None, second=second))
+            self.assertIsNone(self.scheduler.enter_hourly_event(action=None, second=second))
+            self.assertIsNone(self.scheduler.enter_every_minute_event(action=None, second=second))
+
+
 if __name__ == '__main__':
     unittest.main()
