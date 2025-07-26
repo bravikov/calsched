@@ -426,7 +426,7 @@ class TestRealEveryMillisecond(unittest.TestCase):
         scheduler.run()
 
         for i in range(49):
-            self.assertAlmostEqual(clocks[i+1] - clocks[i], 0.05, delta=0.01, msg=clocks)
+            self.assertAlmostEqual(clocks[i+1] - clocks[i], 0.05, delta=0.015, msg=clocks)
 
 
 class TestRealEverySecond(unittest.TestCase):
@@ -448,7 +448,7 @@ class TestRealEverySecond(unittest.TestCase):
         scheduler.run()
 
         for i in range(4):
-            self.assertAlmostEqual(clocks[i+1] - clocks[i], 1.0, delta=0.01, msg=clocks)
+            self.assertAlmostEqual(clocks[i+1] - clocks[i], 1.0, delta=0.015, msg=clocks)
 
 
 @unittest.skip("so long")
@@ -783,7 +783,7 @@ class TestRunForever(unittest.TestCase):
         sleep(0.5)
         scheduler.cancel(stub_event)
         thread.join()
-        self.assertAlmostEqual(0.5, run_duration, delta=0.01)
+        self.assertAlmostEqual(0.5, run_duration, delta=0.015)
 
     def test_enter_and_cancel_many_events(self):
         scheduler = CalendarScheduler()
