@@ -14,7 +14,7 @@ from typing import Optional, Any
 
 SECONDS_IN_MINUTE = 60
 
-@dataclass(slots=True)
+@dataclass()
 class Event:
     """
     Represents a scheduled event in the calendar scheduler.
@@ -26,7 +26,7 @@ class Event:
     canceled: bool = False
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class EventSettings:
     event: Event
     action: Any
@@ -44,7 +44,7 @@ class EventSettings:
     month: int = 1
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEveryMillisecondEvent(EventSettings):
     interval_ms: float = None
 
@@ -52,7 +52,7 @@ class InternalEveryMillisecondEvent(EventSettings):
         return run_time + self.interval_ms
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEverySecondEvent(EventSettings):
     def next_time(self, run_time):
         target_time = run_time // 1 # remove milliseconds
@@ -67,7 +67,7 @@ class InternalEverySecondEvent(EventSettings):
         return target_time
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalEveryMinuteEvent(EventSettings):
     def next_time(self, run_time):
         minute_start = run_time // SECONDS_IN_MINUTE * SECONDS_IN_MINUTE
@@ -83,7 +83,7 @@ class InternalEveryMinuteEvent(EventSettings):
         return target_time
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalHourlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -99,7 +99,7 @@ class InternalHourlyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalDailyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -118,7 +118,7 @@ class InternalDailyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalWeeklyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -139,7 +139,7 @@ class InternalWeeklyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalMonthlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
@@ -167,7 +167,7 @@ class InternalMonthlyEvent(EventSettings):
         return target_time.timestamp()
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class InternalYearlyEvent(EventSettings):
     def next_time(self, run_time):
         dt_base_time = datetime.datetime.fromtimestamp(run_time, self.tz)
