@@ -1,6 +1,6 @@
 [project]
 name = "calsched"
-version = "1.0.1"
+version = "1.1.0"
 description = "Calendar scheduler"
 readme = "README.md"
 authors = [
@@ -27,8 +27,9 @@ exclude = [
     "CLAUDE.md",
     ".gitignore",
     ".python-version",
+    ".github/workflows/pylint.yml",
+    ".github/workflows/unittests.yml",
 ]
-
 [project.urls]
 Repository = "https://github.com/bravikov/calsched"
 Issues = "https://github.com/bravikov/calsched/issues"
