@@ -4,7 +4,7 @@
 [![Pylint](https://github.com/bravikov/calsched/actions/workflows/pylint.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/pylint.yml)
 [![Unit tests](https://github.com/bravikov/calsched/actions/workflows/unittests.yml/badge.svg)](https://github.com/bravikov/calsched/actions/workflows/unittests.yml)
 
-[![ru](https://img.shields.io/badge/lang-russian-blue.svg)](README_ru.md)
+[![ru](https://img.shields.io/badge/lang-russian-blue.svg)](https://github.com/bravikov/calsched/blob/main/README_ru.md)
 
 ## Features
 
