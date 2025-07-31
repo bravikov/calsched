@@ -12,7 +12,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICENSE",]
 dependencies = []
 
 [build-system]
@@ -30,9 +30,6 @@ exclude = [
     ".github/workflows/pylint.yml",
     ".github/workflows/unittests.yml",
 ]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [project.urls]
 Repository = "https://github.com/bravikov/calsched"
