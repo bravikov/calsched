@@ -30,6 +30,10 @@ exclude = [
     ".github/workflows/pylint.yml",
     ".github/workflows/unittests.yml",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project.urls]
 Repository = "https://github.com/bravikov/calsched"
 Issues = "https://github.com/bravikov/calsched/issues"
