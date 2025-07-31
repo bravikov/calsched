@@ -11,6 +11,7 @@
 - Executes an action function on a schedule.
 - Thread-safe: events can be added and canceled from different threads.
 - Supports intervals from milliseconds to years.
+- Allows you to set the date and time when the event will be executed for the first time and when it will stop executing.
 - Uses the standard `sched` scheduler.
 - Timezone support.
 - Syntax similar to `datetime`.
